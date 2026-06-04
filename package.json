@@ -15,7 +15,7 @@
   "dependencies": {
     "graphology": "^0.25.4",
     "graphology-shortest-path": "^2.1.0",
-    "maplibre-gl": "^4.7.1",
+    "maplibre-gl": "^5.24.0",
     "next": "^15.2.4",
     "pmtiles": "^4.3.0",
     "postgres": "^3.4.5",
