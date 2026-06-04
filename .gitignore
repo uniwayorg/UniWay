@@ -11,3 +11,6 @@ tsconfig.tsbuildinfo
 MEMORY.md
 AGENT.md
 SECURITY.md
+
+# Sentry Config File
+.env.sentry-build-plugin
