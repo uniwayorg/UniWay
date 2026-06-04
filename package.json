@@ -34,7 +34,7 @@
     "@vitejs/plugin-react": "^6.0.2",
     "@vitest/coverage-v8": "^4.1.8",
     "eslint": "^9.25.0",
-    "eslint-config-next": "^15.2.4",
+    "eslint-config-next": "^16.2.7",
     "happy-dom": "^20.10.1",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3",
