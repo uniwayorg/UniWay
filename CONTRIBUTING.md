@@ -12,17 +12,15 @@ Examples: `aetos/add-auth`, `sarah/fix-marker-bug`
 
 Use conventional commits:
 
-| Type     | When                          |
-| -------- | ----------------------------- |
-| `feat`   | New feature                   |
-| `fix`    | Bug fix                       |
-| `chore`  | Tooling, dependencies         |
-| `refactor` | Code change, no behavior change |
-| `docs`   | Documentation only            |
-| `style`  | Formatting, styling           |
-| `test`   | Adding or fixing tests        |
-
-Example: `feat: add campus map markers`
+| Type | When | Example |
+|---|---|---|
+| `feat` | New feature | `feat: add campus map markers` |
+| `fix` | Bug fix | `fix: marker not rendering on floor 2` |
+| `chore` | Tooling, dependencies | `chore: add Sentry error monitoring` |
+| `refactor` | Code change, no behavior change | `refactor: extract route parser to lib/` |
+| `docs` | Documentation only | `docs: add README with architecture diagram` |
+| `style` | Formatting, styling | `style: format tailwind classes` |
+| `test` | Adding or fixing tests | `test: add coverage for route assembly` |
 
 ## Merge policy
 
@@ -31,13 +29,14 @@ Example: `feat: add campus map markers`
 
 ## CI
 
-Three checks run on every PR:
+Four checks run on every PR:
 
-1. **Lint & Typecheck** — `next lint` + `tsc --noEmit`
-2. **Tests & Coverage** — `vitest run --coverage` (must meet thresholds)
-3. **Build** — `next build` (must compile)
+1. **PR Title Convention** — title must start with `type: `
+2. **Lint & Typecheck** — `eslint` + `tsc --noEmit`
+3. **Tests & Coverage** — `vitest run --coverage` (must meet thresholds)
+4. **Build** — `next build` (must compile)
 
-All three must pass before merge.
+All four must pass before merge. PR merges automatically when they do.
 
 ## Tests
 
