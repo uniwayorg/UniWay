@@ -8,8 +8,7 @@ tsconfig.tsbuildinfo
 .env.production.local
 .pre-commit-config.yaml
 .cz.toml
-MEMORY.md
-AGENT.md
+docs/
 
 # Sentry Config File
 .env.sentry-build-plugin
