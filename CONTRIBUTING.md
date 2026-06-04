@@ -10,17 +10,17 @@ Examples: `aetos/add-auth`, `sarah/fix-marker-bug`
 
 ## PR titles
 
-Use conventional commits:
+Use conventional commits. Pick the type based on what the PR *does*, not what files it touches:
 
-| Type | When | Example |
+| Type | When | Example PR |
 |---|---|---|
-| `feat` | New feature | `feat: add campus map markers` |
-| `fix` | Bug fix | `fix: marker not rendering on floor 2` |
-| `chore` | Tooling, dependencies | `chore: add Sentry error monitoring` |
-| `refactor` | Code change, no behavior change | `refactor: extract route parser to lib/` |
-| `docs` | Documentation only | `docs: add README with architecture diagram` |
-| `style` | Formatting, styling | `style: format tailwind classes` |
-| `test` | Adding or fixing tests | `test: add coverage for route assembly` |
+| `feat` | User sees something new | `feat: highlight fastest route on map` |
+| `fix` | Something was broken, now it's not | `fix: wrong ETA when starting from basement` |
+| `chore` | Dev tooling, dependencies, config | `chore: bump next to 16, eslint to 10` |
+| `refactor` | Code moved or cleaned up, nothing changes for user | `refactor: move Dijkstra to lib/routing/graph.ts` |
+| `docs` | Only documentation files | `docs: add setup guide to README` |
+| `style` | Formatting, indentation, whitespace — no code logic changes | `style: remove trailing whitespace` |
+| `test` | Adding or updating tests, no production code changes | `test: cover floor-switch edge cases` |
 
 ## Merge policy
 
