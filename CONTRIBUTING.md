@@ -1,5 +1,11 @@
 # Contributing to UniWay
 
+## Before you start
+
+Add your SSH public key to the shared `uniwayorg` GitHub account. See
+`INSTRUCTION.md` for the steps. Without this, `git push` won't work from
+your machine.
+
 ## The full workflow (start to finish)
 
 ### 1. Start working
