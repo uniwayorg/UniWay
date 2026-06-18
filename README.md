@@ -23,7 +23,7 @@ No tile server process. Routing lives in the application layer. Zero vendor lock
 ## Quick start
 
 ```bash
-git clone https://github.com/aetosdios27/UniWay.git
+git clone git@github.com:uniwayorg/UniWay.git
 cd UniWay
 bun install
 cp .env.example .env.local    # fill in your creds
