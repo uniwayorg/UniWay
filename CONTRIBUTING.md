@@ -1,45 +1,102 @@
 # Contributing to UniWay
 
-## Branch naming
+## The full workflow (start to finish)
 
+### 1. Start working
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b <your-name>/<short-description>
 ```
-<your-name>/<short-description>
+
+Branch examples: `aetos/add-auth`, `sarah/marker-bug`, `jake/floor-picker`
+
+### 2. Write code
+
+Make your changes, test locally:
+
+```bash
+npm run dev          # start dev server
+npm run test:run     # run tests once
+npm run lint         # check for lint errors
 ```
 
-Examples: `aetos/add-auth`, `sarah/fix-marker-bug`
+### 3. Commit and push
 
-## PR titles
+```bash
+git add -A                                                    # stage all changes
+git commit -m "whatever you want"                             # commit (message doesn't matter)
+git push origin <your-name>/<short-description>               # push your branch
+```
 
-Use conventional commits. Pick the type based on what the PR *does*, not what files it touches:
+### 4. Create a pull request
 
-| Type | When | Example PR |
+After pushing, GitHub shows a yellow banner with a **"Compare & pull request"** button — click it.
+
+Or from the terminal:
+
+```bash
+gh pr create --base main --head <your-name>/<short-description> --title "<type>: <description>"
+```
+
+**PR title must follow this format:**
+
+| Type | When | Example |
 |---|---|---|
-| `feat` | User sees something new | `feat: highlight fastest route on map` |
-| `fix` | Something was broken, now it's not | `fix: wrong ETA when starting from basement` |
-| `chore` | Dev tooling, dependencies, config | `chore: bump next to 16, eslint to 10` |
-| `refactor` | Code moved or cleaned up, nothing changes for user | `refactor: move Dijkstra to lib/routing/graph.ts` |
-| `docs` | Only documentation files | `docs: add setup guide to README` |
-| `style` | Formatting, indentation, whitespace — no code logic changes | `style: remove trailing whitespace` |
-| `test` | Adding or updating tests, no production code changes | `test: cover floor-switch edge cases` |
+| `feat:` | User sees something new | `feat: add floor switcher to map` |
+| `fix:` | Something was broken | `fix: wrong ETA from basement` |
+| `chore:` | Config, deps, tooling | `chore: bump next to 16` |
+| `refactor:` | Code cleanup, no user change | `refactor: extract Dijkstra to lib/` |
+| `docs:` | Docs only | `docs: add setup guide` |
+| `test:` | Tests only | `test: cover floor-switch edge cases` |
 
-## Merge policy
+### 5. Wait for CI (2-3 minutes)
 
-- **Squash merge** all PRs into `main`
-- Keep branches short-lived (hours to days, not weeks)
+Four checks run automatically. They must all pass before merge:
 
-## CI
+| Check | What it does |
+|---|---|
+| PR Title Convention | Title must start with `type: ` |
+| Lint & Typecheck | No lint errors, no type errors |
+| Tests & Coverage | All tests pass, coverage ≥80% |
+| Build | Code compiles |
 
-Four checks run on every PR:
+### 6. Merge
 
-1. **PR Title Convention** — title must start with `type: `
-2. **Lint & Typecheck** — `eslint` + `tsc --noEmit`
-3. **Tests & Coverage** — `vitest run --coverage` (must meet thresholds)
-4. **Build** — `next build` (must compile)
+Click **"Merge pull request"** on GitHub — then **"Squash and merge"**.
 
-All four must pass before merge. PR merges automatically when they do.
+Or from terminal:
+
+```bash
+gh pr merge <number> --squash
+```
+
+The branch is deleted automatically after merge.
+
+### 7. Get latest main
+
+```bash
+git checkout main
+git pull origin main
+```
+
+---
+
+## Important: don't push to main directly
+
+`git push origin main` will be rejected. Always use a branch + pull request. This ensures CI checks run before changes land.
+
+---
 
 ## Tests
 
-- Tests are co-located next to source files (`page.tsx` → `page.test.tsx`)
+- Tests sit next to the files they test (`page.tsx` → `page.test.tsx`)
 - Coverage thresholds: 80% lines, 80% functions, 80% statements, 70% branches
-- Write tests before or alongside implementation
+- If your code doesn't meet these thresholds, CI fails and the PR can't merge
+
+---
+
+## Need help?
+
+Ask in the group chat. If something's broken, open an issue.
