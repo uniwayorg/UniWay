@@ -37,7 +37,7 @@
     "@vitest/coverage-v8": "^4.1.9",
     "eslint": "^10.5.0",
     "eslint-config-next": "^16.2.7",
-    "happy-dom": "^20.10.1",
+    "happy-dom": "^20.10.6",
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
