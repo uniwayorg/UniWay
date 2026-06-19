@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "migrate": "dotenv -e .env.local -- ley up",
+    "migrate:down": "dotenv -e .env.local -- ley down",
+    "db:seed": "dotenv -e .env.local -- bun scripts/seed.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^10",
