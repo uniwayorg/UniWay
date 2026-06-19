@@ -3,6 +3,8 @@ import { sql } from "@/lib/db";
 import { z } from "zod";
 import { POISchema } from "@/lib/schemas/db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

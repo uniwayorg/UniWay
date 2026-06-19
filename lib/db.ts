@@ -3,7 +3,7 @@ import postgres from "postgres";
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL environment variable is not set.");
+  console.warn("⚠️ DATABASE_URL is not set. Database queries will fail at runtime.");
 }
 
 // Ensure a single connection pool in development
@@ -13,7 +13,7 @@ const globalForPostgres = globalThis as unknown as {
 
 export const sql =
   globalForPostgres.sql ??
-  postgres(connectionString, {
+  postgres(connectionString || "postgres://dummy:dummy@localhost/dummy", {
     // Neon Serverless specific settings
     max: 10,
     idle_timeout: 20,

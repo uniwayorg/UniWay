@@ -3,6 +3,8 @@ import { sql } from "@/lib/db";
 import { z } from "zod";
 import { CampusSchema } from "@/lib/schemas/db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const campuses = await sql`SELECT * FROM campuses ORDER BY name ASC`;
