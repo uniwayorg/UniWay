@@ -1,3 +1,6 @@
+if (!process.env.DATABASE_URL && !process.env.PGURL) {
+  throw new Error("DATABASE_URL or PGURL environment variable is not set.");
+}
 const url = new URL(process.env.DATABASE_URL || process.env.PGURL);
 
 module.exports = {

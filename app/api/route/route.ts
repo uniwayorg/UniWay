@@ -11,11 +11,13 @@ export async function GET(request: Request) {
     const fromLat = parseFloat(searchParams.get("fromLat") || "");
     const toRoomId = searchParams.get("toRoomId");
     
-    // Uncomment when Track B is implemented:
-    // const accessible = searchParams.get("accessible") === "true";
 
     if (isNaN(fromLng) || isNaN(fromLat) || !toRoomId) {
       return NextResponse.json({ error: "Missing required parameters (fromLng, fromLat, toRoomId)" }, { status: 400 });
+    }
+
+    if (fromLng < -180 || fromLng > 180 || fromLat < -90 || fromLat > 90) {
+      return NextResponse.json({ error: "Coordinates out of bounds. Longitude must be between -180 and 180, Latitude between -90 and 90." }, { status: 400 });
     }
 
     // TRACK A: Snap user GPS coordinate to the nearest Room node using PostGIS

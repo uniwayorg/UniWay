@@ -15,6 +15,9 @@ export async function getNearestRoom(
   campusId?: string,
   maxRadiusMeters: number = 50
 ): Promise<Room | null> {
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180 || !Number.isFinite(lat) || lat < -90 || lat > 90 || maxRadiusMeters <= 0) {
+    throw new Error("Invalid parameters: lng and lat must be valid coordinates, and maxRadiusMeters must be positive.");
+  }
   let result;
   
   // The ::geography cast ensures distance is calculated spherically in meters

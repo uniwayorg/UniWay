@@ -23,7 +23,7 @@ Your goal is to build the foundational database layer for UniWay. You are respon
   - `campuses`
   - `buildings`
   - `rooms` (must include `ST_Centroid` generated columns)
-  - `routing_edges` (foreign keys to rooms/corridors, includes `is_accessible`, `distance_meters`, `floor_id`)
+  - `routing_edges` (foreign keys to rooms, includes `is_accessible`, `distance_meters`, `floor_id`)
   - `pois` (Points of Interest)
 
 ### 3. Spatial Queries (`lib/spatial/*.ts`)

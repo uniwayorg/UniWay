@@ -1,6 +1,7 @@
 export async function up(sql) {
-  // 1. Enable PostGIS
+  // 1. Enable PostGIS and PGCrypto
   await sql`CREATE EXTENSION IF NOT EXISTS postgis;`;
+  await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto;`;
 
   // 2. Core Tables
   await sql`
@@ -57,6 +58,13 @@ export async function up(sql) {
   await sql`CREATE INDEX buildings_outline_idx ON buildings USING GIST (outline);`;
   await sql`CREATE INDEX rooms_geom_idx ON rooms USING GIST (geom);`;
   await sql`CREATE INDEX rooms_centroid_idx ON rooms USING GIST (centroid);`;
+
+  // 4. B-Tree Indexes for Foreign Keys
+  await sql`CREATE INDEX buildings_campus_id_idx ON buildings (campus_id);`;
+  await sql`CREATE INDEX rooms_building_id_idx ON rooms (building_id);`;
+  await sql`CREATE INDEX routing_edges_source_node_id_idx ON routing_edges (source_node_id);`;
+  await sql`CREATE INDEX routing_edges_target_node_id_idx ON routing_edges (target_node_id);`;
+  await sql`CREATE INDEX pois_room_id_idx ON pois (room_id);`;
 }
 
 export async function down(sql) {
@@ -65,5 +73,6 @@ export async function down(sql) {
   await sql`DROP TABLE rooms CASCADE;`;
   await sql`DROP TABLE buildings CASCADE;`;
   await sql`DROP TABLE campuses CASCADE;`;
+  await sql`DROP EXTENSION IF EXISTS pgcrypto;`;
   await sql`DROP EXTENSION IF EXISTS postgis;`;
 }

@@ -48,8 +48,9 @@ describe("Spatial Queries - KNN", () => {
     const campusId = "111e2222-e89b-12d3-a456-426614174000";
     await getNearestRoom(-73.985, 40.748, campusId);
 
-    // Ensure the mock was called (we can't easily assert the exact tagged template literal without a complex mock, 
-    // but we can ensure it executed)
+    // Verify the query strings contain the campus filter clause
     expect(sql).toHaveBeenCalledTimes(1);
+    const sqlCallStrings = (sql as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0] as string[];
+    expect(sqlCallStrings.join("")).toContain("b.campus_id =");
   });
 });

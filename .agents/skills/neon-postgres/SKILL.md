@@ -26,8 +26,7 @@ The Neon documentation is the source of truth for all Neon-related information. 
 
 Any Neon doc page can be fetched as markdown in two ways:
 
-1. **Append `.md` to the URL** (simplest): https://neon.com/docs/introduction/branching.md
-2. **Request `text/markdown`** on the standard URL: `curl -H "Accept: text/markdown" https://neon.com/docs/introduction/branching`
+1. **Request `text/markdown`** on the standard URL: `curl -H "Accept: text/markdown" https://neon.com/docs/introduction/branching`
 
 Both return the same markdown content. Use whichever method your tools support.
 
@@ -68,7 +67,7 @@ Offer to inspect existing connected Neon projects or create new ones using the N
 npx -y neonctl@latest init --agent <agent-name>
 ```
 
-Supported `--agent` values: `cursor`, `copilot`, `claude`, `claude-desktop`, `codex`, `opencode`, `cline`, `gemini-cli`, `goose`, `zed`.
+Supported `--agent` values: `antigravity`, `claude-code`, `claude-desktop`, `cline`, `cline-cli`, `codex`, `cursor`, `gemini-cli`, `github-copilot-cli`, `goose`, `mcporter`, `opencode`, `vscode`, `zed`.
 
 This installs the Neon extension (for Cursor/VS Code) or MCP server (for other agents), creates an API key, and adds the `neon-postgres` agent skill to the project.
 

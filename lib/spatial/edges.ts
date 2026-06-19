@@ -21,7 +21,9 @@ export async function fetchEdgesFromCampus(campusId: string): Promise<RoutingEdg
     FROM routing_edges e
     JOIN rooms src ON e.source_node_id = src.id
     JOIN buildings b ON src.building_id = b.id
-    WHERE b.campus_id = ${campusId}
+    JOIN rooms tgt ON e.target_node_id = tgt.id
+    JOIN buildings tb ON tgt.building_id = tb.id
+    WHERE b.campus_id = ${campusId} AND tb.campus_id = ${campusId}
   `;
 
   // Enforce the strict schema boundary before passing to Track B
