@@ -22,10 +22,14 @@ describe("Data Contract - Routing Edges", () => {
   });
 
   it("validates and returns edges correctly", async () => {
+    const validUuid1 = "123e4567-e89b-12d3-a456-426614174001";
+    const validUuid2 = "123e4567-e89b-12d3-a456-426614174002";
+    const validUuid3 = "123e4567-e89b-12d3-a456-426614174003";
+
     const mockDbRow = {
-      id: "edge-1",
-      source_node_id: "src-1",
-      target_node_id: "tgt-1",
+      id: validUuid1,
+      source_node_id: validUuid2,
+      target_node_id: validUuid3,
       distance_meters: 10.5,
       is_accessible: true,
       floor_id: "floor-1",
