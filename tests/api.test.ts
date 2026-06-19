@@ -4,6 +4,7 @@ import { GET as getPois } from "@/app/api/campus/[id]/pois/route";
 import { GET as getRoute } from "@/app/api/route/route";
 import { sql } from "@/lib/db";
 import { getNearestRoom } from "@/lib/spatial/knn";
+import { findShortestPath } from "@/lib/routing/graph";
 
 // Mock dependencies
 vi.mock("@/lib/db", () => ({
@@ -12,6 +13,10 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/spatial/knn", () => ({
   getNearestRoom: vi.fn(),
+}));
+
+vi.mock("@/lib/routing/graph", () => ({
+  findShortestPath: vi.fn(),
 }));
 
 describe("API Routes", () => {
@@ -77,6 +82,11 @@ describe("API Routes", () => {
 
     it("returns 200 with placeholder if nearest room is found", async () => {
       (getNearestRoom as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ id: "start-room-123", name: "Lobby" });
+      (findShortestPath as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        type: "Feature",
+        properties: { distance_meters: 10 },
+        geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] }
+      });
       const response = await getRoute(new Request("http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=room123"));
       
       expect(response.status).toBe(200);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getNearestRoom } from "@/lib/spatial/knn";
-// import { findShortestPath } from "@/lib/routing/graph"; // <-- Track B will provide this
+import { findShortestPath } from "@/lib/routing/graph";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const fromLng = parseFloat(searchParams.get("fromLng") || "");
     const fromLat = parseFloat(searchParams.get("fromLat") || "");
     const toRoomId = searchParams.get("toRoomId");
-    
+    const accessible = searchParams.get("accessible") === "true" || searchParams.get("accessibility") === "true";
 
     if (isNaN(fromLng) || isNaN(fromLat) || !toRoomId) {
       return NextResponse.json({ error: "Missing required parameters (fromLng, fromLat, toRoomId)" }, { status: 400 });
@@ -27,16 +27,13 @@ export async function GET(request: Request) {
     }
 
     // TRACK B: Integration Point
-    // Your co-founder will replace this placeholder with their Graphology Dijkstra function:
-    // const routeGeoJSON = await findShortestPath(startRoom.id, toRoomId, accessible);
+    const routeGeoJSON = await findShortestPath(startRoom.id, toRoomId, accessible);
     
-    const placeholderResponse = {
-      type: "Feature",
-      properties: { distance_meters: 0 },
-      geometry: { type: "LineString", coordinates: [] }
-    };
+    if (!routeGeoJSON) {
+      return NextResponse.json({ error: "Could not find a valid route to the destination." }, { status: 404 });
+    }
 
-    return NextResponse.json({ data: placeholderResponse });
+    return NextResponse.json({ data: routeGeoJSON });
   } catch (error) {
     console.error("Failed to calculate route:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
