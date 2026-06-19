@@ -5,14 +5,17 @@ describe("Database Connection", () => {
     vi.resetModules();
   });
 
-  it("throws an error if DATABASE_URL is not set", async () => {
+  it("warns if DATABASE_URL is not set", async () => {
     const originalEnv = process.env.DATABASE_URL;
     delete process.env.DATABASE_URL;
 
-    await expect(async () => {
-      await import("@/lib/db");
-    }).rejects.toThrow("DATABASE_URL environment variable is not set.");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
+    await import("@/lib/db");
+
+    expect(warnSpy).toHaveBeenCalledWith("⚠️ DATABASE_URL is not set. Database queries will fail at runtime.");
+
+    warnSpy.mockRestore();
     process.env.DATABASE_URL = originalEnv;
   });
 
