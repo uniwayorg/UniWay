@@ -8,8 +8,9 @@ export async function GET(request: Request) {
     const fromLng = parseFloat(searchParams.get("fromLng") || "");
     const fromLat = parseFloat(searchParams.get("fromLat") || "");
     const toRoomId = searchParams.get("toRoomId");
-    // Prefix with underscore to satisfy ESLint until Track B is implemented
-    const _accessible = searchParams.get("accessible") === "true";
+    
+    // Uncomment when Track B is implemented:
+    // const accessible = searchParams.get("accessible") === "true";
 
     if (isNaN(fromLng) || isNaN(fromLat) || !toRoomId) {
       return NextResponse.json({ error: "Missing required parameters (fromLng, fromLat, toRoomId)" }, { status: 400 });
