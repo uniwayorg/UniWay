@@ -1,6 +1,5 @@
 import { sql } from "@/lib/db";
 import { POISchema, type POI } from "@/lib/schemas/db";
-import { z } from "zod";
 
 export async function fetchPois(
   campusId: string,
