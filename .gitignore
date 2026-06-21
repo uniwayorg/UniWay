@@ -4,6 +4,8 @@ coverage/
 tsconfig.tsbuildinfo
 .env
 .env.local
+/docs/LINEAR.md
+/opencode.jsonc
 .env.development.local
 .env.production.local
 .pre-commit-config.yaml
