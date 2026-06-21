@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchCampusMetadata } from "@/lib/spatial/campus";
+import { fetchRooms } from "@/lib/spatial/rooms";
 import { withRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -13,15 +13,13 @@ export async function GET(
 
   try {
     const { id: campusId } = await params;
-    const metadata = await fetchCampusMetadata(campusId);
+    const { searchParams } = new URL(request.url);
+    const buildingId = searchParams.get("buildingId") ?? undefined;
 
-    if (!metadata) {
-      return NextResponse.json({ error: "Campus not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ data: metadata });
+    const rooms = await fetchRooms(campusId, buildingId);
+    return NextResponse.json({ data: rooms });
   } catch (error) {
-    console.error("Failed to fetch campus metadata:", error);
+    console.error("Failed to fetch rooms:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

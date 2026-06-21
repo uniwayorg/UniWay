@@ -1,7 +1,10 @@
 import { sql } from "@/lib/db";
+import { z } from "zod";
 import {
+  BuildingSchema,
   CampusMetadataSchema,
   CampusSchema,
+  type Building,
   type Campus,
   type CampusMetadata,
 } from "@/lib/schemas/db";
@@ -64,6 +67,21 @@ export async function fetchCampusMetadata(
     buildings,
     poiCounts,
   });
+}
+
+export async function fetchBuildings(campusId: string): Promise<Building[]> {
+  const buildings = await sql`
+    SELECT
+      b.id,
+      b.campus_id,
+      b.name,
+      ST_AsGeoJSON(b.outline)::json AS outline
+    FROM buildings b
+    WHERE b.campus_id = ${campusId}
+    ORDER BY b.name ASC
+  `;
+
+  return z.array(BuildingSchema).parse(buildings);
 }
 
 export async function isPointInCampus(

@@ -5,11 +5,15 @@ import { withRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const rateLimitResponse = withRateLimit(request, { maxRequests: 60, windowMs: 60_000 });
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
+    const { id: campusId } = await params;
     const { searchParams } = new URL(request.url);
     const fromLng = parseFloat(searchParams.get("fromLng") || "");
     const fromLat = parseFloat(searchParams.get("fromLat") || "");
@@ -24,7 +28,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Coordinates out of bounds" }, { status: 400 });
     }
 
-    const startRoom = await getNearestRoom(fromLng, fromLat);
+    const startRoom = await getNearestRoom(fromLng, fromLat, campusId);
     if (!startRoom) {
       return NextResponse.json({ error: "Could not find a valid starting location nearby." }, { status: 404 });
     }

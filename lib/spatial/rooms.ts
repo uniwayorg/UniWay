@@ -1,4 +1,29 @@
 import { sql } from "@/lib/db";
+import { RoomSchema, type Room } from "@/lib/schemas/db";
+import { z } from "zod";
+
+export async function fetchRooms(
+  campusId: string,
+  buildingId?: string
+): Promise<Room[]> {
+  const rows = buildingId
+    ? await sql`
+      SELECT r.*
+      FROM rooms r
+      JOIN buildings b ON r.building_id = b.id
+      WHERE b.campus_id = ${campusId} AND r.building_id = ${buildingId}
+      ORDER BY r.floor ASC, r.name ASC
+    `
+    : await sql`
+      SELECT r.*
+      FROM rooms r
+      JOIN buildings b ON r.building_id = b.id
+      WHERE b.campus_id = ${campusId}
+      ORDER BY r.floor ASC, r.name ASC
+    `;
+
+  return z.array(RoomSchema).parse(rows);
+}
 
 export async function getCampusIdForRoom(roomId: string): Promise<string | null> {
   const result = await sql`

@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { CreateObstructionReportSchema } from "@/lib/schemas/db";
 import { createObstructionReport } from "@/lib/spatial/reports";
+import { withRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const rateLimitResponse = withRateLimit(request, { maxRequests: 30, windowMs: 60_000 });
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body: unknown = await request.json();
     const parsed = CreateObstructionReportSchema.safeParse(body);

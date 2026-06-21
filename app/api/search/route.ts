@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { searchPois } from "@/lib/spatial/search";
+import { withRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,9 @@ const SearchQuerySchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const rateLimitResponse = withRateLimit(request, { maxRequests: 60, windowMs: 60_000 });
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const { searchParams } = new URL(request.url);
     const parsed = SearchQuerySchema.safeParse({
