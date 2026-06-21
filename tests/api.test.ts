@@ -94,7 +94,8 @@ describe("API Routes", () => {
 
   describe("GET /api/campus/[id]/pois", () => {
     it("returns a list of POIs", async () => {
-      const mockPoi = { id: "123e4567-e89b-12d3-a456-426614174001", room_id: "123e4567-e89b-12d3-a456-426614174002", name: "CS Lab", category: "lab", tags: [], total: 1 };
+      const mockPoi = { id: "123e4567-e89b-12d3-a456-426614174001", room_id: "123e4567-e89b-12d3-a456-426614174002", name: "CS Lab", category: "lab", tags: [] };
+      mockSql.mockResolvedValueOnce([{ total: 1 }]); // COUNT query
       mockSql.mockResolvedValueOnce([mockPoi]);
 
       const response = await getPois(req(), params("campus-1"));
@@ -145,12 +146,14 @@ describe("API Routes", () => {
 
   describe("GET /api/campus/[id]/rooms", () => {
     it("returns rooms for a campus", async () => {
-      const mockRoom = { id: "123e4567-e89b-12d3-a456-426614174002", building_id: "123e4567-e89b-12d3-a456-426614174001", floor: "1", name: "101", total: 1 };
-      // FRAGILE: fetchRooms conditionally calls sql`` for building filter when no buildingId param.
-      // postgres.js returns a query fragment synchronously (no DB call), but the vi.fn() mock
-      // treats every tagged template call as a function invocation, consuming mockResolvedValueOnce.
-      // If fetchRooms is refactored to avoid the empty sql`` fragment, remove this dummy mock.
+      const mockRoom = { id: "123e4567-e89b-12d3-a456-426614174002", building_id: "123e4567-e89b-12d3-a456-426614174001", floor: "1", name: "101" };
+      // FRAGILE: fetchRooms calls sql three times when buildingId is absent:
+      // 1. sql`` empty fragment for building filter (postgres.js returns query fragment,
+      //    but vi.fn() treats it as a function call consuming mockResolvedValueOnce)
+      // 2. SELECT COUNT(*) for total
+      // 3. SELECT data rows with LIMIT/OFFSET
       mockSql.mockResolvedValueOnce([]);
+      mockSql.mockResolvedValueOnce([{ total: 1 }]);
       mockSql.mockResolvedValueOnce([mockRoom]);
 
       const response = await getRooms(req(), params("campus-1"));

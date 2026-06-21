@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     });
 
     if (!parsed.success) {
-      return badRequest("Invalid coordinates", formatZodError(parsed.error));
+      return badRequest("Invalid coordinates", formatZodError(parsed.error), undefined, request);
     }
 
     const campus = await findCampusByPoint(parsed.data.lng, parsed.data.lat);

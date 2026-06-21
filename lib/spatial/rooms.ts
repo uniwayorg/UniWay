@@ -1,5 +1,4 @@
 import { sql } from "@/lib/db";
-import { RoomSchema, type Room } from "@/lib/schemas/db";
 import { z } from "zod";
 
 const RoomListItemSchema = z.object({
@@ -18,8 +17,16 @@ export async function fetchRooms(
 ): Promise<{ rooms: RoomListItem[]; total: number }> {
   const buildingFilter = buildingId ? sql`AND r.building_id = ${buildingId}` : sql``;
 
+  const [countRow] = await sql`
+    SELECT COUNT(*) AS total
+    FROM rooms r
+    JOIN buildings b ON r.building_id = b.id
+    WHERE b.campus_id = ${campusId} ${buildingFilter}
+  `;
+  const total = Number(countRow?.total ?? 0);
+
   const rows = await sql`
-    SELECT r.id, r.building_id, r.floor, r.name, COUNT(*) OVER() AS total
+    SELECT r.id, r.building_id, r.floor, r.name
     FROM rooms r
     JOIN buildings b ON r.building_id = b.id
     WHERE b.campus_id = ${campusId} ${buildingFilter}
@@ -28,12 +35,7 @@ export async function fetchRooms(
     OFFSET ${offset}
   `;
 
-  const total = rows.length > 0 ? Number(rows[0].total) : 0;
-  const rooms = rows.map((row: Record<string, unknown>) => {
-    const { total: _total, ...room } = row;
-    return RoomListItemSchema.parse(room);
-  });
-
+  const rooms = rows.map((row: Record<string, unknown>) => RoomListItemSchema.parse(row));
   return { rooms, total };
 }
 

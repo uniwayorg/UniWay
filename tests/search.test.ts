@@ -26,10 +26,10 @@ describe("Spatial Queries - Search", () => {
       category: "lab",
       tags: ["computers"],
       rank: 0.12,
-      total: 1,
     };
 
-    (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([mockResult]);
+    (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ total: 1 }]); // COUNT
+    (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([mockResult]); // DATA
 
     const { results, total } = await searchPois(
       "123e4567-e89b-12d3-a456-426614174000",
@@ -43,12 +43,13 @@ describe("Spatial Queries - Search", () => {
   });
 
   it("caps the search limit at 50", async () => {
-    (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
+    (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ total: 1 }]); // COUNT
+    (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]); // DATA
 
     const { results } = await searchPois("123e4567-e89b-12d3-a456-426614174000", "lab", 999);
 
     expect(results).toEqual([]);
-    const sqlCall = (sql as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    const sqlCall = (sql as unknown as ReturnType<typeof vi.fn>).mock.calls[1];
     expect(sqlCall).toContain(50);
   });
 });

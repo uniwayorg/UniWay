@@ -10,12 +10,18 @@ export async function POST(request: Request) {
   const rateLimitResponse = withRateLimit(request, { maxRequests: 30, windowMs: 60_000 });
   if (rateLimitResponse) return rateLimitResponse;
 
+  let body: unknown;
   try {
-    const body: unknown = await request.json();
+    body = await request.json();
+  } catch {
+    return badRequest("Invalid JSON body");
+  }
+
+  try {
     const parsed = CreateObstructionReportSchema.safeParse(body);
 
     if (!parsed.success) {
-      return badRequest("Invalid request body", formatZodError(parsed.error));
+      return badRequest("Invalid request body", formatZodError(parsed.error), undefined, request);
     }
 
     const report = await createObstructionReport(parsed.data);

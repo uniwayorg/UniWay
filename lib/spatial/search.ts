@@ -17,6 +17,16 @@ export async function searchPois(
 
   const boundedLimit = Math.min(Math.max(limit, 1), MAX_SEARCH_LIMIT);
 
+  const [countRow] = await sql`
+    SELECT COUNT(*) AS total
+    FROM pois p
+    JOIN rooms r ON p.room_id = r.id
+    JOIN buildings b ON r.building_id = b.id
+    WHERE b.campus_id = ${campusId}
+      AND p.search_vector @@ plainto_tsquery('english', ${trimmedQuery})
+  `;
+  const total = Number(countRow?.total ?? 0);
+
   const result = await sql`
     SELECT
       p.id,
@@ -24,8 +34,7 @@ export async function searchPois(
       p.name,
       p.category,
       p.tags,
-      ts_rank(p.search_vector, plainto_tsquery('english', ${trimmedQuery})) AS rank,
-      COUNT(*) OVER() AS total
+      ts_rank(p.search_vector, plainto_tsquery('english', ${trimmedQuery})) AS rank
     FROM pois p
     JOIN rooms r ON p.room_id = r.id
     JOIN buildings b ON r.building_id = b.id
@@ -36,11 +45,6 @@ export async function searchPois(
     OFFSET ${offset}
   `;
 
-  const total = result.length > 0 ? Number(result[0].total) : 0;
-  const results = result.map((row: Record<string, unknown>) => {
-    const { total: _total, ...item } = row;
-    return POISearchResultSchema.parse(item);
-  });
-
+  const results = result.map((row: Record<string, unknown>) => POISearchResultSchema.parse(row));
   return { results, total };
 }

@@ -21,15 +21,6 @@ export interface PaginationParams {
   limit: number;
 }
 
-export interface PaginatedData<T> {
-  data: T[];
-  pagination: {
-    offset: number;
-    limit: number;
-    total: number;
-  };
-}
-
 export function parsePagination(
   searchParams: URLSearchParams,
   defaultLimit = 20,
@@ -48,15 +39,22 @@ export function parsePagination(
 export function paginatedResponse<T>(
   data: T[],
   total: number,
-  pagination: PaginationParams
+  pagination: PaginationParams,
+  maxAge = 300
 ): NextResponse {
   return NextResponse.json(
     { data, pagination: { offset: pagination.offset, limit: pagination.limit, total } },
-    { headers: cacheHeaders(300) }
+    { headers: cacheHeaders(maxAge) }
   );
 }
 
 export function cacheHeaders(maxAgeSeconds: number, staleWhileRevalidate = 86400): HeadersInit {
+  if (!Number.isFinite(maxAgeSeconds) || maxAgeSeconds < 0) {
+    throw new Error(`Invalid maxAgeSeconds: ${maxAgeSeconds}`);
+  }
+  if (!Number.isFinite(staleWhileRevalidate) || staleWhileRevalidate < 0) {
+    throw new Error(`Invalid staleWhileRevalidate: ${staleWhileRevalidate}`);
+  }
   return {
     "Cache-Control": `public, max-age=${maxAgeSeconds}, s-maxage=${maxAgeSeconds}, stale-while-revalidate=${staleWhileRevalidate}`,
   };
@@ -65,7 +63,7 @@ export function cacheHeaders(maxAgeSeconds: number, staleWhileRevalidate = 86400
 export function successResponse(data: unknown, status = 200, maxAge?: number): NextResponse {
   return NextResponse.json(
     { data },
-    { status, headers: maxAge ? cacheHeaders(maxAge) : undefined }
+    { status, headers: maxAge !== undefined ? cacheHeaders(maxAge) : undefined }
   );
 }
 
@@ -84,29 +82,49 @@ export function apiError(
   );
 }
 
+function formatRequestHeaders(request?: Request): { body: Record<string, string> | undefined; headers: Record<string, string> } {
+  const requestId = request?.headers.get("x-request-id");
+  return {
+    body: requestId ? { requestId } : undefined,
+    headers: requestId ? { "X-Request-Id": requestId } : {},
+  };
+}
+
 export function badRequest(
   message: string,
   details?: { field: string; message: string }[],
-  code: ApiErrorCodeType = ApiErrorCode.BAD_REQUEST
+  code?: ApiErrorCodeType,
+  request?: Request
 ): NextResponse {
-  const body: Record<string, unknown> = { error: message, code };
+  const reqMeta = formatRequestHeaders(request);
+  const body: Record<string, unknown> = { error: message, code: code ?? ApiErrorCode.BAD_REQUEST };
   if (details && details.length > 0) body.details = details;
-  return NextResponse.json(body, { status: 400 });
+  if (reqMeta.body) Object.assign(body, reqMeta.body);
+  return NextResponse.json(body, { status: 400, headers: reqMeta.headers });
 }
 
 export function notFound(
   message: string,
-  code: ApiErrorCodeType = ApiErrorCode.NOT_FOUND
+  code?: ApiErrorCodeType,
+  request?: Request
 ): NextResponse {
-  return NextResponse.json({ error: message, code }, { status: 404 });
+  const reqMeta = formatRequestHeaders(request);
+  const body: Record<string, unknown> = { error: message, code: code ?? ApiErrorCode.NOT_FOUND };
+  if (reqMeta.body) Object.assign(body, reqMeta.body);
+  return NextResponse.json(body, { status: 404, headers: reqMeta.headers });
 }
 
 export function formatZodError(error: ZodError): { field: string; message: string }[] {
   return error.issues.map((issue) => ({
-    field: issue.path.join("."),
+    field: issue.path.length > 0 ? issue.path.join(".") : "_root",
     message: issue.message,
   }));
 }
+
+export const AccessibleBool = z
+  .enum(["true", "false"])
+  .transform((v) => v === "true")
+  .optional();
 
 const COORD_REGEX = /^-?\d+(\.\d+)?$/;
 

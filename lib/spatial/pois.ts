@@ -6,8 +6,17 @@ export async function fetchPois(
   offset = 0,
   limit = 20
 ): Promise<{ pois: POI[]; total: number }> {
+  const [countRow] = await sql`
+    SELECT COUNT(*) AS total
+    FROM pois p
+    JOIN rooms r ON p.room_id = r.id
+    JOIN buildings b ON r.building_id = b.id
+    WHERE b.campus_id = ${campusId}
+  `;
+  const total = Number(countRow?.total ?? 0);
+
   const rows = await sql`
-    SELECT p.*, COUNT(*) OVER() AS total
+    SELECT p.*
     FROM pois p
     JOIN rooms r ON p.room_id = r.id
     JOIN buildings b ON r.building_id = b.id
@@ -17,11 +26,6 @@ export async function fetchPois(
     OFFSET ${offset}
   `;
 
-  const total = rows.length > 0 ? Number(rows[0].total) : 0;
-  const pois = rows.map((row: Record<string, unknown>) => {
-    const { total: _total, ...poi } = row;
-    return POISchema.parse(poi);
-  });
-
+  const pois = rows.map((row: Record<string, unknown>) => POISchema.parse(row));
   return { pois, total };
 }

@@ -16,7 +16,7 @@ export async function GET(
     const metadata = await fetchCampusMetadata(campusId);
 
     if (!metadata) {
-      return notFound("Campus not found");
+      return notFound("Campus not found", undefined, request);
     }
 
     return successResponse(metadata, 200, 300);
