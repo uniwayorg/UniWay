@@ -2,6 +2,11 @@
 // The only write endpoint (POST /api/report) accepts unauthenticated submissions.
 // If authenticated write endpoints are added, require an Authorization header validated
 // against a configured API key before this statement changes.
+//
+// CORS posture: same-origin by design. The frontend and API are served from the same
+// Next.js deployment. No Access-Control-Allow-Origin header is set, so browsers apply
+// the default same-origin policy. If a separate mobile client or third-party consumer
+// is added, add an explicit origin in next.config.ts headers.
 
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
