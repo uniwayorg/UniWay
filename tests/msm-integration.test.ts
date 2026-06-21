@@ -43,7 +43,7 @@ describe("API integration (MSW)", () => {
   });
 
   it("GET /api/campus/:id/route returns route", async () => {
-    const res = await fetch("http://localhost/api/campus/123e4567-e89b-12d3-a456-426614174000/route?fromLng=-73.98&fromLat=40.74&toRoomId=room123");
+    const res = await fetch("http://localhost/api/campus/123e4567-e89b-12d3-a456-426614174000/route?fromLng=-73.98&fromLat=40.74&toRoomId=123e4567-e89b-12d3-a456-426614174003");
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -56,7 +56,7 @@ describe("API integration (MSW)", () => {
   });
 
   it("GET /api/route returns route with valid params", async () => {
-    const res = await fetch("http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=room123");
+    const res = await fetch("http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=123e4567-e89b-12d3-a456-426614174003");
     const json = await res.json();
 
     expect(res.status).toBe(200);

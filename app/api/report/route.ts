@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { CreateObstructionReportSchema } from "@/lib/schemas/db";
 import { createObstructionReport } from "@/lib/spatial/reports";
 import { withRateLimit } from "@/lib/rate-limit";
+import { apiError, badRequest, formatZodError } from "@/lib/api-response";
 
 export const dynamic = "force-dynamic";
 
@@ -14,16 +15,12 @@ export async function POST(request: Request) {
     const parsed = CreateObstructionReportSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid request body", details: parsed.error.flatten() },
-        { status: 400 }
-      );
+      return badRequest("Invalid request body", formatZodError(parsed.error));
     }
 
     const report = await createObstructionReport(parsed.data);
     return NextResponse.json({ data: report }, { status: 201 });
   } catch (error) {
-    console.error("Failed to create obstruction report:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return apiError(error, "Failed to create obstruction report", request);
   }
 }

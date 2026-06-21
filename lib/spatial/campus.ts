@@ -84,6 +84,24 @@ export async function fetchBuildings(campusId: string): Promise<Building[]> {
   return z.array(BuildingSchema).parse(buildings);
 }
 
+export async function findCampusByPoint(
+  lng: number,
+  lat: number
+): Promise<Campus | null> {
+  const result = await sql`
+    SELECT
+      id,
+      name,
+      ST_AsGeoJSON(bounds)::json AS bounds
+    FROM campuses
+    WHERE ST_Contains(bounds, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326))
+    LIMIT 1
+  `;
+
+  if (result.length === 0) return null;
+  return CampusSchema.parse(result[0]);
+}
+
 export async function isPointInCampus(
   lng: number,
   lat: number,

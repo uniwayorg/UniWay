@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET as getCampuses } from "@/app/api/campus/route";
+import { GET as getContainingCampus } from "@/app/api/campus/containing/route";
 import { GET as getCampusMetadata } from "@/app/api/campus/[id]/route";
 import { GET as getBuildings } from "@/app/api/campus/[id]/buildings/route";
 import { GET as getRooms } from "@/app/api/campus/[id]/rooms/route";
@@ -31,6 +32,7 @@ const mockGetNearestRoom = getNearestRoom as unknown as ReturnType<typeof vi.fn>
 const mockFindShortestPath = findShortestPath as unknown as ReturnType<typeof vi.fn>;
 const req = (url = "http://localhost") => new Request(url);
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
+const TEST_ROOM_ID = "123e4567-e89b-12d3-a456-426614174003";
 
 describe("API Routes", () => {
   beforeEach(() => {
@@ -61,9 +63,38 @@ describe("API Routes", () => {
     });
   });
 
+  describe("GET /api/campus/containing", () => {
+    it("returns 400 if lat/lng missing", async () => {
+      const response = await getContainingCampus(req());
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 if lat/lng not valid numbers", async () => {
+      const response = await getContainingCampus(req("http://localhost/api/campus/containing?lat=abc&lng=def"));
+      expect(response.status).toBe(400);
+    });
+
+    it("returns null if no campus contains point", async () => {
+      mockSql.mockResolvedValueOnce([]);
+      const response = await getContainingCampus(req("http://localhost/api/campus/containing?lat=40.74&lng=-73.98"));
+      const json = await response.json();
+      expect(response.status).toBe(200);
+      expect(json.data).toBeNull();
+    });
+
+    it("returns campus if point is within bounds", async () => {
+      const mockCampus = { id: "123e4567-e89b-12d3-a456-426614174000", name: "Main Campus", bounds: { type: "Polygon", coordinates: [] } };
+      mockSql.mockResolvedValueOnce([mockCampus]);
+      const response = await getContainingCampus(req("http://localhost/api/campus/containing?lat=40.74&lng=-73.98"));
+      const json = await response.json();
+      expect(response.status).toBe(200);
+      expect(json.data.name).toBe("Main Campus");
+    });
+  });
+
   describe("GET /api/campus/[id]/pois", () => {
     it("returns a list of POIs", async () => {
-      const mockPoi = { id: "123e4567-e89b-12d3-a456-426614174001", room_id: "123e4567-e89b-12d3-a456-426614174002", name: "CS Lab", category: "lab", tags: [] };
+      const mockPoi = { id: "123e4567-e89b-12d3-a456-426614174001", room_id: "123e4567-e89b-12d3-a456-426614174002", name: "CS Lab", category: "lab", tags: [], total: 1 };
       mockSql.mockResolvedValueOnce([mockPoi]);
 
       const response = await getPois(req(), params("campus-1"));
@@ -114,7 +145,12 @@ describe("API Routes", () => {
 
   describe("GET /api/campus/[id]/rooms", () => {
     it("returns rooms for a campus", async () => {
-      const mockRoom = { id: "123e4567-e89b-12d3-a456-426614174002", building_id: "123e4567-e89b-12d3-a456-426614174001", floor: "1", name: "101", geom: null };
+      const mockRoom = { id: "123e4567-e89b-12d3-a456-426614174002", building_id: "123e4567-e89b-12d3-a456-426614174001", floor: "1", name: "101", total: 1 };
+      // FRAGILE: fetchRooms conditionally calls sql`` for building filter when no buildingId param.
+      // postgres.js returns a query fragment synchronously (no DB call), but the vi.fn() mock
+      // treats every tagged template call as a function invocation, consuming mockResolvedValueOnce.
+      // If fetchRooms is refactored to avoid the empty sql`` fragment, remove this dummy mock.
+      mockSql.mockResolvedValueOnce([]);
       mockSql.mockResolvedValueOnce([mockRoom]);
 
       const response = await getRooms(req(), params("campus-1"));
@@ -147,7 +183,7 @@ describe("API Routes", () => {
         geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] },
       });
 
-      const response = await getCampusRoute(req("http://localhost/api/campus/campus-1/route?fromLng=-73.98&fromLat=40.74&toRoomId=room123"), params("campus-1"));
+      const response = await getCampusRoute(req(`http://localhost/api/campus/campus-1/route?fromLng=-73.98&fromLat=40.74&toRoomId=${TEST_ROOM_ID}`), params("campus-1"));
       expect(response.status).toBe(200);
 
       expect(mockGetNearestRoom).toHaveBeenCalledWith(-73.98, 40.74, "campus-1");
@@ -161,13 +197,13 @@ describe("API Routes", () => {
     });
 
     it("returns 400 if coordinates out of bounds", async () => {
-      const response = await getRoute(req("http://localhost/api/route?fromLng=999&fromLat=40.74&toRoomId=room123"));
+      const response = await getRoute(req(`http://localhost/api/route?fromLng=999&fromLat=40.74&toRoomId=${TEST_ROOM_ID}`));
       expect(response.status).toBe(400);
     });
 
     it("returns 404 if no nearest room found", async () => {
       mockGetNearestRoom.mockResolvedValueOnce(null);
-      const response = await getRoute(req("http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=room123"));
+      const response = await getRoute(req(`http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=${TEST_ROOM_ID}`));
       expect(response.status).toBe(404);
     });
 
@@ -178,7 +214,7 @@ describe("API Routes", () => {
         properties: { distance_meters: 10 },
         geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] },
       });
-      const response = await getRoute(req("http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=room123"));
+      const response = await getRoute(req(`http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=${TEST_ROOM_ID}`));
 
       expect(response.status).toBe(200);
       const json = await response.json();
@@ -188,13 +224,13 @@ describe("API Routes", () => {
     it("returns 404 if no route found", async () => {
       mockGetNearestRoom.mockResolvedValueOnce({ id: "123e4567-e89b-12d3-a456-426614174000", building_id: "123e4567-e89b-12d3-a456-426614174001", floor: "1", name: "Lobby", geom: null });
       mockFindShortestPath.mockResolvedValueOnce(null);
-      const response = await getRoute(req("http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=room123"));
+      const response = await getRoute(req(`http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=${TEST_ROOM_ID}`));
       expect(response.status).toBe(404);
     });
 
     it("handles internal errors", async () => {
       mockGetNearestRoom.mockRejectedValueOnce(new Error("KNN crash"));
-      const response = await getRoute(req("http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=room123"));
+      const response = await getRoute(req(`http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=${TEST_ROOM_ID}`));
       expect(response.status).toBe(500);
     });
 
@@ -205,7 +241,7 @@ describe("API Routes", () => {
         properties: { distance_meters: 10 },
         geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] },
       });
-      const response = await getRoute(req("http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=room123&accessible=true"));
+      const response = await getRoute(req(`http://localhost/api/route?fromLng=-73.98&fromLat=40.74&toRoomId=${TEST_ROOM_ID}&accessible=true`));
       expect(response.status).toBe(200);
     });
   });

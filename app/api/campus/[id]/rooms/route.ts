@@ -1,8 +1,13 @@
-import { NextResponse } from "next/server";
 import { fetchRooms } from "@/lib/spatial/rooms";
 import { withRateLimit } from "@/lib/rate-limit";
+import { apiError, parsePagination, paginatedResponse, badRequest, formatZodError } from "@/lib/api-response";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+
+const RoomsQuerySchema = z.object({
+  buildingId: z.string().uuid().optional(),
+});
 
 export async function GET(
   request: Request,
@@ -14,12 +19,19 @@ export async function GET(
   try {
     const { id: campusId } = await params;
     const { searchParams } = new URL(request.url);
-    const buildingId = searchParams.get("buildingId") ?? undefined;
+    const pagination = parsePagination(searchParams, 20, 100);
 
-    const rooms = await fetchRooms(campusId, buildingId);
-    return NextResponse.json({ data: rooms });
+    const parsed = RoomsQuerySchema.safeParse({
+      buildingId: searchParams.get("buildingId") ?? undefined,
+    });
+
+    if (!parsed.success) {
+      return badRequest("Invalid buildingId", formatZodError(parsed.error));
+    }
+
+    const { rooms, total } = await fetchRooms(campusId, parsed.data.buildingId, pagination.offset, pagination.limit);
+    return paginatedResponse(rooms, total, pagination);
   } catch (error) {
-    console.error("Failed to fetch rooms:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return apiError(error, "Failed to fetch rooms", request);
   }
 }

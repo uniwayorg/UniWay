@@ -1,8 +1,6 @@
-import { NextResponse } from "next/server";
-import { sql } from "@/lib/db";
-import { z } from "zod";
-import { POISchema } from "@/lib/schemas/db";
+import { fetchPois } from "@/lib/spatial/pois";
 import { withRateLimit } from "@/lib/rate-limit";
+import { apiError, parsePagination, paginatedResponse } from "@/lib/api-response";
 
 export const dynamic = "force-dynamic";
 
@@ -15,20 +13,12 @@ export async function GET(
 
   try {
     const { id: campusId } = await params;
+    const { searchParams } = new URL(request.url);
+    const pagination = parsePagination(searchParams, 20, 100);
 
-    const pois = await sql`
-      SELECT p.*
-      FROM pois p
-      JOIN rooms r ON p.room_id = r.id
-      JOIN buildings b ON r.building_id = b.id
-      WHERE b.campus_id = ${campusId}
-      ORDER BY p.name ASC
-    `;
-
-    const validated = z.array(POISchema).parse(pois);
-    return NextResponse.json({ data: validated });
+    const { pois, total } = await fetchPois(campusId, pagination.offset, pagination.limit);
+    return paginatedResponse(pois, total, pagination);
   } catch (error) {
-    console.error("Failed to fetch POIs:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return apiError(error, "Failed to fetch POIs", request);
   }
 }

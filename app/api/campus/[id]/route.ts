@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { fetchCampusMetadata } from "@/lib/spatial/campus";
 import { withRateLimit } from "@/lib/rate-limit";
+import { apiError, notFound, successResponse } from "@/lib/api-response";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +16,11 @@ export async function GET(
     const metadata = await fetchCampusMetadata(campusId);
 
     if (!metadata) {
-      return NextResponse.json({ error: "Campus not found" }, { status: 404 });
+      return notFound("Campus not found");
     }
 
-    return NextResponse.json({ data: metadata });
+    return successResponse(metadata, 200, 300);
   } catch (error) {
-    console.error("Failed to fetch campus metadata:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return apiError(error, "Failed to fetch campus metadata", request);
   }
 }

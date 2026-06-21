@@ -1,14 +1,13 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { searchPois } from "@/lib/spatial/search";
 import { withRateLimit } from "@/lib/rate-limit";
+import { apiError, badRequest, parsePagination, paginatedResponse, formatZodError } from "@/lib/api-response";
 
 export const dynamic = "force-dynamic";
 
 const SearchQuerySchema = z.object({
   q: z.string().min(1),
   campus: z.string().uuid(),
-  limit: z.coerce.number().int().min(1).max(50).optional(),
 });
 
 export async function GET(request: Request) {
@@ -20,17 +19,22 @@ export async function GET(request: Request) {
     const parsed = SearchQuerySchema.safeParse({
       q: searchParams.get("q") ?? "",
       campus: searchParams.get("campus") ?? "",
-      limit: searchParams.get("limit") ?? undefined,
     });
 
     if (!parsed.success) {
-      return NextResponse.json({ error: "Missing or invalid parameters (q, campus)" }, { status: 400 });
+      return badRequest("Validation failed", formatZodError(parsed.error));
     }
 
-    const results = await searchPois(parsed.data.campus, parsed.data.q, parsed.data.limit);
-    return NextResponse.json({ data: results });
+    const pagination = parsePagination(searchParams, 20, 50);
+    const { results, total } = await searchPois(
+      parsed.data.campus,
+      parsed.data.q,
+      pagination.limit,
+      pagination.offset
+    );
+
+    return paginatedResponse(results, total, pagination);
   } catch (error) {
-    console.error("Failed to search POIs:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return apiError(error, "Failed to search POIs", request);
   }
 }
