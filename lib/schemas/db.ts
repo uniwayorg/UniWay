@@ -49,3 +49,45 @@ export const POISchema = z.object({
   tags: z.array(z.string()),
 });
 export type POI = z.infer<typeof POISchema>;
+
+// POI search result (includes ts_rank)
+export const POISearchResultSchema = POISchema.extend({
+  rank: z.number(),
+});
+export type POISearchResult = z.infer<typeof POISearchResultSchema>;
+
+// Campus metadata (campus + buildings + POI counts)
+export const CampusMetadataSchema = z.object({
+  campus: CampusSchema,
+  buildings: z.array(z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    outline: z.any(),
+    floors: z.array(z.string()),
+  })),
+  poiCounts: z.array(z.object({
+    category: z.string(),
+    count: z.number(),
+  })),
+});
+export type CampusMetadata = z.infer<typeof CampusMetadataSchema>;
+
+// Obstruction report (DB row)
+export const ObstructionReportSchema = z.object({
+  id: z.string().uuid(),
+  room_id: z.string().uuid().nullable(),
+  edge_id: z.string().uuid().nullable(),
+  description: z.string(),
+  reported_at: z.date(),
+});
+export type ObstructionReport = z.infer<typeof ObstructionReportSchema>;
+
+// Create obstruction report (POST body)
+export const CreateObstructionReportSchema = z.object({
+  roomId: z.string().uuid().optional(),
+  edgeId: z.string().uuid().optional(),
+  description: z.string().min(1).max(1000),
+  lng: z.number().min(-180).max(180).optional(),
+  lat: z.number().min(-90).max(90).optional(),
+});
+export type CreateObstructionReportInput = z.infer<typeof CreateObstructionReportSchema>;
