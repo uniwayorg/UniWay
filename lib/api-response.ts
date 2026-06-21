@@ -82,25 +82,16 @@ export function apiError(
   );
 }
 
-function formatRequestHeaders(request?: Request): { body: Record<string, string> | undefined; headers: Record<string, string> } {
-  const requestId = request?.headers.get("x-request-id");
-  return {
-    body: requestId ? { requestId } : undefined,
-    headers: requestId ? { "X-Request-Id": requestId } : {},
-  };
-}
-
 export function badRequest(
   message: string,
   details?: { field: string; message: string }[],
   code?: ApiErrorCodeType,
   request?: Request
 ): NextResponse {
-  const reqMeta = formatRequestHeaders(request);
-  const body: Record<string, unknown> = { error: message, code: code ?? ApiErrorCode.BAD_REQUEST };
+  const requestId = request?.headers.get("x-request-id") ?? crypto.randomUUID();
+  const body: Record<string, unknown> = { error: message, code: code ?? ApiErrorCode.BAD_REQUEST, requestId };
   if (details && details.length > 0) body.details = details;
-  if (reqMeta.body) Object.assign(body, reqMeta.body);
-  return NextResponse.json(body, { status: 400, headers: reqMeta.headers });
+  return NextResponse.json(body, { status: 400, headers: { "X-Request-Id": requestId } });
 }
 
 export function notFound(
@@ -108,10 +99,9 @@ export function notFound(
   code?: ApiErrorCodeType,
   request?: Request
 ): NextResponse {
-  const reqMeta = formatRequestHeaders(request);
-  const body: Record<string, unknown> = { error: message, code: code ?? ApiErrorCode.NOT_FOUND };
-  if (reqMeta.body) Object.assign(body, reqMeta.body);
-  return NextResponse.json(body, { status: 404, headers: reqMeta.headers });
+  const requestId = request?.headers.get("x-request-id") ?? crypto.randomUUID();
+  const body: Record<string, unknown> = { error: message, code: code ?? ApiErrorCode.NOT_FOUND, requestId };
+  return NextResponse.json(body, { status: 404, headers: { "X-Request-Id": requestId } });
 }
 
 export function formatZodError(error: ZodError): { field: string; message: string }[] {

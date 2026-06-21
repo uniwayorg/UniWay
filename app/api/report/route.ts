@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return badRequest("Invalid JSON body");
+    return badRequest("Invalid JSON body", undefined, undefined, request);
   }
 
   try {
