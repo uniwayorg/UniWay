@@ -23,7 +23,13 @@ export async function getNearestRoom(
   // The ::geography cast ensures distance is calculated spherically in meters
   if (campusId) {
     result = await sql`
-      SELECT r.* 
+      SELECT
+        r.id,
+        r.building_id,
+        r.floor,
+        r.name,
+        ST_AsGeoJSON(r.geom)::json AS geom,
+        ST_AsGeoJSON(r.centroid)::json AS centroid
       FROM rooms r
       JOIN buildings b ON r.building_id = b.id
       WHERE b.campus_id = ${campusId}
@@ -33,7 +39,13 @@ export async function getNearestRoom(
     `;
   } else {
     result = await sql`
-      SELECT r.* 
+      SELECT
+        r.id,
+        r.building_id,
+        r.floor,
+        r.name,
+        ST_AsGeoJSON(r.geom)::json AS geom,
+        ST_AsGeoJSON(r.centroid)::json AS centroid
       FROM rooms r
       WHERE ST_DWithin(r.centroid::geography, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography, ${maxRadiusMeters})
       ORDER BY r.centroid <-> ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)

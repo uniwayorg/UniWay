@@ -1,10 +1,11 @@
 import { http, HttpResponse } from "msw";
+import { mockPolygon } from "@/tests/fixtures/geojson";
 
 export const handlers = [
   http.get("*/api/campus", () =>
     HttpResponse.json({
       data: [
-        { id: "123e4567-e89b-12d3-a456-426614174000", name: "Main Campus", bounds: { type: "Polygon", coordinates: [] } },
+        { id: "123e4567-e89b-12d3-a456-426614174000", name: "Main Campus", bounds: mockPolygon },
       ],
     })
   ),
@@ -12,7 +13,7 @@ export const handlers = [
   http.get("*/api/campus/:id", ({ params }) =>
     HttpResponse.json({
       data: {
-        campus: { id: params.id, name: "Main Campus", bounds: { type: "Polygon", coordinates: [] } },
+        campus: { id: params.id, name: "Main Campus", bounds: mockPolygon },
         buildings: [],
         poiCounts: [],
       },
@@ -30,7 +31,7 @@ export const handlers = [
   http.get("*/api/campus/:id/buildings", () =>
     HttpResponse.json({
       data: [
-        { id: "123e4567-e89b-12d3-a456-426614174001", campus_id: "123e4567-e89b-12d3-a456-426614174000", name: "Engineering Building", outline: null },
+        { id: "123e4567-e89b-12d3-a456-426614174001", campus_id: "123e4567-e89b-12d3-a456-426614174000", name: "Engineering Building", outline: mockPolygon },
       ],
     })
   ),
@@ -38,7 +39,7 @@ export const handlers = [
   http.get("*/api/campus/:id/rooms", () =>
     HttpResponse.json({
       data: [
-        { id: "123e4567-e89b-12d3-a456-426614174002", building_id: "123e4567-e89b-12d3-a456-426614174001", floor: "1", name: "101", geom: null },
+        { id: "123e4567-e89b-12d3-a456-426614174002", building_id: "123e4567-e89b-12d3-a456-426614174001", floor: "1", name: "101" },
       ],
     })
   ),

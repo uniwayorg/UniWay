@@ -10,6 +10,7 @@ import { GET as getRoute } from "@/app/api/route/route";
 import { sql } from "@/lib/db";
 import { getNearestRoom } from "@/lib/spatial/knn";
 import { findShortestPath } from "@/lib/routing/graph";
+import { mockPolygon } from "./fixtures/geojson";
 
 vi.mock("@/lib/db", () => ({
   sql: vi.fn(),
@@ -125,7 +126,7 @@ describe("API Routes", () => {
 
   describe("GET /api/campus/[id]/buildings", () => {
     it("returns buildings for a campus", async () => {
-      const mockBuilding = { id: "123e4567-e89b-12d3-a456-426614174001", campus_id: "123e4567-e89b-12d3-a456-426614174000", name: "Engineering Building", outline: null };
+      const mockBuilding = { id: "123e4567-e89b-12d3-a456-426614174001", campus_id: "123e4567-e89b-12d3-a456-426614174000", name: "Engineering Building", outline: mockPolygon };
       mockSql.mockResolvedValueOnce([mockBuilding]);
 
       const response = await getBuildings(req(), params("campus-1"));
