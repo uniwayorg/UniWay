@@ -3,14 +3,22 @@ name: PostGIS Integration
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+  NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
 
 jobs:
   spatial-validation:
     name: Spatial Queries against Neon
     runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -20,17 +28,64 @@ jobs:
 
       - run: bun install
 
+      - name: Create ephemeral Neon branch
+        id: neon-branch
+        if: github.event_name == 'pull_request'
+        run: |
+          BRANCH_NAME="pr-${{ github.event.pull_request.number }}"
+          RESPONSE=$(curl -sf -X POST \
+            "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches" \
+            -H "Accept: application/json" \
+            -H "Authorization: Bearer ${NEON_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$(cat <<-JSON
+          {
+            "endpoints": [{"type": "read_write"}],
+            "branch": {"name": "${BRANCH_NAME}"}
+          }
+          JSON
+          )")
+
+          BRANCH_ID=$(echo "$RESPONSE" | jq -r '.branch.id')
+          echo "branch_id=${BRANCH_ID}" >> "$GITHUB_OUTPUT"
+
+          # Poll each operation until finished
+          for op_id in $(echo "$RESPONSE" | jq -r '.operations[] | .id'); do
+            for i in $(seq 1 30); do
+              OP=$(curl -sf "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/operations/${op_id}" \
+                -H "Accept: application/json" \
+                -H "Authorization: Bearer ${NEON_API_KEY}")
+              STATUS=$(echo "$OP" | jq -r '.operation.status')
+              case "$STATUS" in
+                finished) break ;;
+                failed|error) echo "Operation ${op_id} failed"; exit 1 ;;
+              esac
+              sleep 2
+            done
+          done
+
+          CONNECTION_URI=$(echo "$RESPONSE" | jq -r '.connection_uris[0].connection_uri')
+          echo "connection_uri=${CONNECTION_URI}" >> "$GITHUB_OUTPUT"
+
       - name: Run migrations
         run: bun run migrate
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ steps.neon-branch.outputs.connection_uri || secrets.DATABASE_URL }}
 
       - name: Seed data
         run: bun run db:seed
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ steps.neon-branch.outputs.connection_uri || secrets.DATABASE_URL }}
 
       - name: Validate PostGIS spatial queries
         run: bun run validate:spatial
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ steps.neon-branch.outputs.connection_uri || secrets.DATABASE_URL }}
+
+      - name: Cleanup ephemeral Neon branch
+        if: always() && steps.neon-branch.outputs.branch_id != ''
+        run: |
+          curl -sf -X DELETE \
+            "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches/${{ steps.neon-branch.outputs.branch_id }}" \
+            -H "Accept: application/json" \
+            -H "Authorization: Bearer ${NEON_API_KEY}"
