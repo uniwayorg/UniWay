@@ -66,6 +66,7 @@ type SqlTag = typeof raw;
 export const sql: SqlTag = timedSql;
 
 // Graceful shutdown — close DB connections on process exit
+/* v8 ignore start */
 const SHUTDOWN_TIMEOUT_MS = 5_000;
 
 function shutdown(signal: string) {
@@ -86,3 +87,4 @@ if (typeof process !== "undefined" && !process.env.VITEST) {
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
 }
+/* v8 ignore stop */
