@@ -7,10 +7,12 @@ import { GET as getRooms } from "@/app/api/campus/[id]/rooms/route";
 import { GET as getCampusRoute } from "@/app/api/campus/[id]/route/route";
 import { GET as getPois } from "@/app/api/campus/[id]/pois/route";
 import { GET as getRoute } from "@/app/api/route/route";
+import { GET as getNearby } from "@/app/api/campus/[id]/nearby/route";
 import { sql } from "@/lib/db";
 import { getNearestRoom } from "@/lib/spatial/knn";
 import { findShortestPath } from "@/lib/routing/graph";
-import { mockPolygon } from "./fixtures/geojson";
+import { isPointInCampus } from "@/lib/spatial/campus";
+import { mockPolygon, mockPoint } from "./fixtures/geojson";
 
 vi.mock("@/lib/db", () => ({
   sql: vi.fn(),
@@ -23,6 +25,14 @@ vi.mock("@/lib/spatial/knn", () => ({
 vi.mock("@/lib/routing/graph", () => ({
   findShortestPath: vi.fn(),
 }));
+
+vi.mock("@/lib/spatial/campus", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/spatial/campus")>("@/lib/spatial/campus");
+  return {
+    ...actual,
+    isPointInCampus: vi.fn().mockResolvedValue(true),
+  };
+});
 
 vi.mock("@/lib/rate-limit", () => ({
   withRateLimit: vi.fn().mockReturnValue(null),
@@ -191,6 +201,74 @@ describe("API Routes", () => {
       expect(response.status).toBe(200);
 
       expect(mockGetNearestRoom).toHaveBeenCalledWith(-73.98, 40.74, "campus-1");
+    });
+
+    it("returns 404 if start point is outside campus bounds", async () => {
+      const mockIsPointInCampus = isPointInCampus as unknown as ReturnType<typeof vi.fn>;
+      mockIsPointInCampus.mockResolvedValueOnce(false);
+
+      const response = await getCampusRoute(req(`http://localhost/api/campus/campus-1/route?fromLng=-73.98&fromLat=40.74&toRoomId=${TEST_ROOM_ID}`), params("campus-1"));
+      expect(response.status).toBe(404);
+    });
+
+    it("handles errors gracefully", async () => {
+      const mockIsPointInCampus = isPointInCampus as unknown as ReturnType<typeof vi.fn>;
+      mockIsPointInCampus.mockRejectedValueOnce(new Error("Bounds check crash"));
+
+      const response = await getCampusRoute(req(`http://localhost/api/campus/campus-1/route?fromLng=-73.98&fromLat=40.74&toRoomId=${TEST_ROOM_ID}`), params("campus-1"));
+      expect(response.status).toBe(500);
+    });
+  });
+
+  describe("GET /api/campus/[id]/nearby", () => {
+    it("returns 400 if missing lat/lng", async () => {
+      const response = await getNearby(req(), params("campus-1"));
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 if coordinates out of bounds", async () => {
+      const response = await getNearby(req("http://localhost/api/campus/campus-1/nearby?lat=999&lng=-73.98"), params("campus-1"));
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 404 if point is outside campus", async () => {
+      const mockIsPointInCampus = isPointInCampus as unknown as ReturnType<typeof vi.fn>;
+      mockIsPointInCampus.mockResolvedValueOnce(false);
+
+      const response = await getNearby(req("http://localhost/api/campus/campus-1/nearby?lat=40.74&lng=-73.98"), params("campus-1"));
+      expect(response.status).toBe(404);
+    });
+
+    it("returns POIs within radius", async () => {
+      const mockPoi = { id: "123e4567-e89b-12d3-a456-426614174001", room_id: "123e4567-e89b-12d3-a456-426614174002", name: "CS Lab", category: "lab", tags: [] };
+      mockSql.mockResolvedValueOnce([mockPoi]);
+
+      const response = await getNearby(req("http://localhost/api/campus/campus-1/nearby?lat=40.74&lng=-73.98"), params("campus-1"));
+      expect(response.status).toBe(200);
+
+      const json = await response.json();
+      expect(json.data).toHaveLength(1);
+      expect(json.data[0].name).toBe("CS Lab");
+    });
+
+    it("returns rooms within radius", async () => {
+      const mockRoom = { id: "123e4567-e89b-12d3-a456-426614174003", building_id: "123e4567-e89b-12d3-a456-426614174001", floor: "1", name: "101", geom: mockPolygon, centroid: mockPoint };
+      mockSql.mockResolvedValueOnce([mockRoom]);
+
+      const response = await getNearby(req("http://localhost/api/campus/campus-1/nearby?lat=40.74&lng=-73.98&type=rooms"), params("campus-1"));
+      expect(response.status).toBe(200);
+
+      const json = await response.json();
+      expect(json.data).toHaveLength(1);
+      expect(json.data[0].name).toBe("101");
+    });
+
+    it("handles errors gracefully", async () => {
+      const mockIsPointInCampus = isPointInCampus as unknown as ReturnType<typeof vi.fn>;
+      mockIsPointInCampus.mockRejectedValueOnce(new Error("DB Error"));
+
+      const response = await getNearby(req("http://localhost/api/campus/campus-1/nearby?lat=40.74&lng=-73.98"), params("campus-1"));
+      expect(response.status).toBe(500);
     });
   });
 

@@ -1,5 +1,6 @@
 import { getNearestRoom } from "@/lib/spatial/knn";
 import { findShortestPath } from "@/lib/routing/graph";
+import { isPointInCampus } from "@/lib/spatial/campus";
 import { withRateLimit } from "@/lib/rate-limit";
 import { apiError, badRequest, notFound, successResponse, CoordString, formatZodError, AccessibleBool } from "@/lib/api-response";
 import { z } from "zod";
@@ -33,6 +34,11 @@ export async function GET(
 
     if (!parsed.success) {
       return badRequest("Validation failed", formatZodError(parsed.error), undefined, request);
+    }
+
+    const inside = await isPointInCampus(parsed.data.fromLng, parsed.data.fromLat, campusId);
+    if (!inside) {
+      return notFound("Location is outside campus bounds", undefined, request);
     }
 
     const startRoom = await getNearestRoom(parsed.data.fromLng, parsed.data.fromLat, campusId);

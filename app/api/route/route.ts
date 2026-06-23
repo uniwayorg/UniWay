@@ -1,7 +1,8 @@
+import { NextResponse } from "next/server";
 import { getNearestRoom } from "@/lib/spatial/knn";
 import { findShortestPath } from "@/lib/routing/graph";
 import { withRateLimit } from "@/lib/rate-limit";
-import { apiError, badRequest, notFound, successResponse, CoordString, formatZodError, AccessibleBool } from "@/lib/api-response";
+import { apiError, badRequest, notFound, CoordString, formatZodError, AccessibleBool } from "@/lib/api-response";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +42,17 @@ export async function GET(request: Request) {
       return notFound("Could not find a valid route to the destination", undefined, request);
     }
 
-    return successResponse(routeGeoJSON);
+    return NextResponse.json(
+      { data: routeGeoJSON },
+      {
+        status: 200,
+        headers: {
+          "Deprecation": "true",
+          "Sunset": "Sat, 01 Nov 2025 00:00:00 GMT",
+          "Link": "</api/campus/{id}/route>; rel=\"successor-version\"",
+        },
+      }
+    );
   } catch (error) {
     return apiError(error, "Failed to calculate route", request);
   }
