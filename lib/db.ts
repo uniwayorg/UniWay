@@ -64,3 +64,25 @@ const timedSql = new Proxy(raw, {
 type SqlTag = typeof raw;
 
 export const sql: SqlTag = timedSql;
+
+// Graceful shutdown — close DB connections on process exit
+const SHUTDOWN_TIMEOUT_MS = 5_000;
+
+function shutdown(signal: string) {
+  singletonLogger.info("shutting down database connections", { signal });
+  const timeout = setTimeout(() => {
+    singletonLogger.warn("database shutdown timed out, forcing exit");
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS);
+  timeout.unref();
+
+  raw.end().then(() => {
+    clearTimeout(timeout);
+    singletonLogger.info("database connections closed", { signal });
+  });
+}
+
+if (typeof process !== "undefined" && !process.env.VITEST) {
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+}
