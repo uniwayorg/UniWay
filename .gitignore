@@ -10,7 +10,7 @@ tsconfig.tsbuildinfo
 .env.production.local
 .pre-commit-config.yaml
 .cz.toml
-docs/
+/docs/
 
 # Sentry Config File
 .env.sentry-build-plugin

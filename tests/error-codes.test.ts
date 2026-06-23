@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { ApiErrorCode, badRequest, notFound, apiError, validateBodySize } from "@/lib/api-response";
 
 vi.mock("@/lib/logger", () => ({ createLogger: () => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn() }) }));

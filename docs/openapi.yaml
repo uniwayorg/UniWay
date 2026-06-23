@@ -1,0 +1,1126 @@
+openapi: 3.1.0
+info:
+  title: UniWay API
+  description: |
+    Campus indoor navigation API. All routes are unauthenticated in V1.
+    Campus maps are public — GPS is worthless indoors, and MapLibre renders
+    everything client-side.
+  version: 1.0.0
+  contact:
+    name: UniWay Team
+    url: https://github.com/uniwayorg/UniWay
+
+servers:
+  - url: https://uniway.vercel.app
+    description: Production
+  - url: http://localhost:3000
+    description: Local development
+
+paths:
+  /api/campus:
+    get:
+      summary: List all campuses
+      operationId: listCampuses
+      tags: [Campuses]
+      responses:
+        "200":
+          description: List of campuses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Campus"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/campus/{id}:
+    get:
+      summary: Get campus metadata with buildings and POI category counts
+      operationId: getCampus
+      tags: [Campuses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campus UUID
+      responses:
+        "200":
+          description: Campus metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CampusMetadata"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/campus/{id}/buildings:
+    get:
+      summary: List buildings in a campus
+      operationId: listBuildings
+      tags: [Campuses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campus UUID
+      responses:
+        "200":
+          description: List of buildings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Building"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/campus/{id}/rooms:
+    get:
+      summary: List rooms in a campus
+      operationId: listRooms
+      tags: [Rooms]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campus UUID
+        - name: buildingId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Filter by building UUID
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+      responses:
+        "200":
+          description: Paginated list of rooms
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RoomListItem"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/rooms/{id}:
+    get:
+      summary: Get room detail with geometry and context
+      operationId: getRoom
+      tags: [Rooms]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Room UUID
+      responses:
+        "200":
+          description: Room detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/RoomDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/campus/{id}/pois:
+    get:
+      summary: List points of interest in a campus
+      operationId: listPois
+      tags: [POIs]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campus UUID
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 50
+          description: Filter by category
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+      responses:
+        "200":
+          description: Paginated list of POIs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/POI"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/pois/{id}:
+    get:
+      summary: Get POI detail with room and building context
+      operationId: getPoi
+      tags: [POIs]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: POI UUID
+      responses:
+        "200":
+          description: POI detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/POIDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/search:
+    get:
+      summary: Full-text search for POIs
+      operationId: searchPois
+      tags: [Search]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+          description: Search query
+        - name: campus
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campus UUID to scope search
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 50
+          description: Filter by POI category
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          description: Items per page
+      responses:
+        "200":
+          description: Paginated search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/POISearchResult"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/search/suggest:
+    get:
+      summary: Autocomplete POI name suggestions
+      operationId: suggestPois
+      tags: [Search]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+          description: Search prefix
+        - name: campus
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campus UUID
+      responses:
+        "200":
+          description: List of suggestions (max 5)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/POISuggestResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/campus/{id}/nearby:
+    get:
+      summary: Find nearby POIs or rooms around a point
+      operationId: getNearby
+      tags: [Spatial]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campus UUID
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+          description: Latitude
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+          description: Longitude
+        - name: radius
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+          description: Search radius in meters
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pois, rooms]
+            default: pois
+          description: Type of places to search
+        - name: floor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 20
+          description: Filter by floor (rooms only)
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 50
+          description: Filter by category (POIs only)
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+      responses:
+        "200":
+          description: Paginated nearby places
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      oneOf:
+                        - $ref: "#/components/schemas/POI"
+                        - $ref: "#/components/schemas/RoomNearbyItem"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/campus/containing:
+    get:
+      summary: Find which campus contains a geographic point
+      operationId: findContainingCampus
+      tags: [Campuses]
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+          description: Latitude
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+          description: Longitude
+      responses:
+        "200":
+          description: Campus containing the point (data may be null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/Campus"
+                      - type: "null"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/campus/{id}/reports:
+    get:
+      summary: List obstruction reports for a campus
+      operationId: listReports
+      tags: [Reports]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campus UUID
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            default: open
+          description: Filter by report status
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+      responses:
+        "200":
+          description: Paginated list of obstruction reports
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ObstructionReport"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/report:
+    post:
+      summary: Submit an obstruction report
+      operationId: createReport
+      tags: [Reports]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateObstructionReportRequest"
+        description: |
+          Must provide at least one of roomId or edgeId.
+          If lng is provided, lat must also be provided (and vice versa).
+          Max body size: 10KB.
+      responses:
+        "201":
+          description: Report created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ObstructionReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/campus/{id}/route:
+    get:
+      summary: Calculate route to a room within a campus
+      operationId: getCampusRoute
+      tags: [Routing]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campus UUID
+        - name: fromLng
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+          description: Starting longitude
+        - name: fromLat
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+          description: Starting latitude
+        - name: toRoomId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Destination room UUID
+        - name: accessible
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Filter for accessible routes only
+      responses:
+        "200":
+          description: Route as a GeoJSON feature
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/RouteFeature"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/route:
+    get:
+      summary: "[Deprecated] Calculate route across all campuses"
+      description: |
+        Deprecated in favor of `/api/campus/{id}/route`.
+        This endpoint does not scope search to a specific campus.
+      operationId: getRouteLegacy
+      tags: [Routing, Deprecated]
+      deprecated: true
+      parameters:
+        - name: fromLng
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+          description: Starting longitude
+        - name: fromLat
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+          description: Starting latitude
+        - name: toRoomId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Destination room UUID
+        - name: accessible
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Filter for accessible routes only
+      responses:
+        "200":
+          description: Route as a GeoJSON feature
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/RouteFeature"
+          headers:
+            Deprecation:
+              schema:
+                type: string
+                example: "true"
+            Sunset:
+              schema:
+                type: string
+                example: "Sat, 01 Nov 2025 00:00:00 GMT"
+            Link:
+              schema:
+                type: string
+                example: '</api/campus/{id}/route>; rel="successor-version"'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  schemas:
+    # ── GeoJSON Types ──────────────────────────────────────────
+    GeoJSONPoint:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [Point]
+        coordinates:
+          type: array
+          items:
+            type: number
+          minItems: 2
+          maxItems: 3
+          example: [-73.985, 40.748]
+
+    GeoJSONPolygon:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [Polygon]
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                type: number
+              minItems: 2
+      example:
+        type: Polygon
+        coordinates:
+          - [[-73.985, 40.748], [-73.985, 40.749], [-73.984, 40.749], [-73.984, 40.748], [-73.985, 40.748]]
+
+    GeoJSONLineString:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [LineString]
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+            minItems: 2
+
+    RouteFeature:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        properties:
+          type: object
+          properties:
+            distance_meters:
+              type: number
+        geometry:
+          $ref: "#/components/schemas/GeoJSONLineString"
+
+    # ── Core Domain Types ──────────────────────────────────────
+    Campus:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        bounds:
+          $ref: "#/components/schemas/GeoJSONPolygon"
+
+    CampusMetadata:
+      type: object
+      properties:
+        campus:
+          $ref: "#/components/schemas/Campus"
+        buildings:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              outline:
+                $ref: "#/components/schemas/GeoJSONPolygon"
+              floors:
+                type: array
+                items:
+                  type: string
+        poiCounts:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              count:
+                type: integer
+
+    Building:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        campus_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        outline:
+          $ref: "#/components/schemas/GeoJSONPolygon"
+
+    RoomListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        building_id:
+          type: string
+          format: uuid
+        floor:
+          type: string
+        name:
+          type: string
+
+    RoomDetail:
+      allOf:
+        - $ref: "#/components/schemas/RoomListItem"
+        - type: object
+          properties:
+            geom:
+              $ref: "#/components/schemas/GeoJSONPolygon"
+            centroid:
+              $ref: "#/components/schemas/GeoJSONPoint"
+            building_name:
+              type: string
+            campus_id:
+              type: string
+              format: uuid
+            campus_name:
+              type: string
+
+    RoomNearbyItem:
+      allOf:
+        - $ref: "#/components/schemas/RoomListItem"
+        - type: object
+          properties:
+            geom:
+              $ref: "#/components/schemas/GeoJSONPolygon"
+            centroid:
+              $ref: "#/components/schemas/GeoJSONPoint"
+
+    POI:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        room_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    POIDetail:
+      allOf:
+        - $ref: "#/components/schemas/POI"
+        - type: object
+          properties:
+            room_name:
+              type: string
+            floor:
+              type: string
+            building_id:
+              type: string
+              format: uuid
+            building_name:
+              type: string
+
+    POISearchResult:
+      allOf:
+        - $ref: "#/components/schemas/POI"
+        - type: object
+          properties:
+            rank:
+              type: number
+            floor:
+              type: string
+            building_id:
+              type: string
+              format: uuid
+            building_name:
+              type: string
+
+    POISuggestResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          type: string
+
+    # ── Reports ────────────────────────────────────────────────
+    CreateObstructionReportRequest:
+      type: object
+      properties:
+        roomId:
+          type: string
+          format: uuid
+          description: UUID of the obstructed room (mutually exclusive with edgeId)
+        edgeId:
+          type: string
+          format: uuid
+          description: UUID of the obstructed routing edge (mutually exclusive with roomId)
+        description:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Description of the obstruction
+        lng:
+          type: number
+          minimum: -180
+          maximum: 180
+          description: Longitude (must be provided with lat)
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+          description: Latitude (must be provided with lng)
+      required: [description]
+
+    ObstructionReport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        room_id:
+          type: string
+          format: uuid
+          nullable: true
+        edge_id:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+        status:
+          type: string
+          enum: [open, resolved, dismissed]
+        reported_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    # ── Common ─────────────────────────────────────────────────
+    Pagination:
+      type: object
+      properties:
+        offset:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+                enum: [BAD_REQUEST, VALIDATION_ERROR]
+              requestId:
+                type: string
+                format: uuid
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                    message:
+                      type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+                enum: [NOT_FOUND]
+              requestId:
+                type: string
+                format: uuid
+
+    PayloadTooLarge:
+      description: Request body exceeds maximum size
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+                enum: [PAYLOAD_TOO_LARGE]
+              requestId:
+                type: string
+                format: uuid
+
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                enum: ["Too many requests"]
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+                enum: [INTERNAL_ERROR]
+              requestId:
+                type: string
+                format: uuid
