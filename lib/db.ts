@@ -9,6 +9,10 @@ if (!connectionString) {
   singletonLogger.warn("DATABASE_URL is not set. Database queries will fail at runtime.");
 }
 
+const ssl = connectionString
+  ? (new URL(connectionString).searchParams.get("sslmode") === "require" ? "require" as const : false)
+  : "require" as const;
+
 // Ensure a single connection pool in development
 const globalForPostgres = globalThis as unknown as {
   sql: postgres.Sql | undefined;
@@ -20,7 +24,7 @@ const raw: postgres.Sql =
     max: 10,
     idle_timeout: 20,
     connect_timeout: 10,
-    ssl: "require",
+    ssl,
     statement_timeout: STATEMENT_TIMEOUT_MS,
   } as Record<string, unknown>);
 

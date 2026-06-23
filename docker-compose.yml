@@ -1,0 +1,20 @@
+services:
+  postgis:
+    image: postgis/postgis:16-3.5
+    container_name: uniway-postgis
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: uniway
+      POSTGRES_USER: uniway
+      POSTGRES_PASSWORD: uniway
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uniway -d uniway"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
