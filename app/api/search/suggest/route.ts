@@ -6,7 +6,7 @@ import { apiError, badRequest, successResponse, formatZodError } from "@/lib/api
 export const dynamic = "force-dynamic";
 
 const SuggestQuerySchema = z.object({
-  q: z.string().min(1),
+  q: z.string().min(1).max(200),
   campus: z.string().uuid(),
 });
 

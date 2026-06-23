@@ -6,9 +6,9 @@ import { apiError, badRequest, parsePagination, paginatedResponse, formatZodErro
 export const dynamic = "force-dynamic";
 
 const SearchQuerySchema = z.object({
-  q: z.string().min(1),
+  q: z.string().min(1).max(200),
   campus: z.string().uuid(),
-  category: z.string().optional(),
+  category: z.string().max(50).optional(),
 });
 
 export async function GET(request: Request) {

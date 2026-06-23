@@ -11,8 +11,8 @@ const NearbyQuerySchema = z.object({
   lng: CoordString(-180, 180),
   radius: z.coerce.number().positive().max(1000).default(50),
   type: z.enum(["pois", "rooms"]).default("pois"),
-  floor: z.string().optional(),
-  category: z.string().optional(),
+  floor: z.string().max(20).optional(),
+  category: z.string().max(50).optional(),
 });
 
 export async function GET(
