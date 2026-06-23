@@ -11,6 +11,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
+import { createLogger } from "@/lib/logger";
 
 export const ApiErrorCode = {
   BAD_REQUEST: "BAD_REQUEST",
@@ -79,8 +80,9 @@ export function apiError(
   status = 500
 ): NextResponse {
   const requestId = request?.headers.get("x-request-id") ?? crypto.randomUUID();
+  const logger = createLogger(requestId);
   Sentry.captureException(error, { extra: { context, requestId } });
-  console.error(`[${requestId}] ${context}:`, error);
+  logger.error(context, { error: String(error) });
   return NextResponse.json(
     { error: "Internal Server Error", code: ApiErrorCode.INTERNAL_ERROR, requestId },
     { status, headers: { "X-Request-Id": requestId } }

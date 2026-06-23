@@ -1,0 +1,36 @@
+name: PostGIS Integration
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  spatial-validation:
+    name: Spatial Queries against Neon
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install
+
+      - name: Run migrations
+        run: bun run migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Seed data
+        run: bun run db:seed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Validate PostGIS spatial queries
+        run: bun run validate:spatial
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

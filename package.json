@@ -14,7 +14,8 @@
     "migrate": "dotenv -e .env.local -- ley up",
     "migrate:down": "dotenv -e .env.local -- ley down",
     "db:seed": "dotenv -e .env.local -- bun scripts/seed.ts",
-    "import:campus": "dotenv -e .env.local -- bun scripts/import-campus.ts"
+    "import:campus": "dotenv -e .env.local -- bun scripts/import-campus.ts",
+    "validate:spatial": "dotenv -e .env.local -- bun scripts/validate-spatial.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^10",

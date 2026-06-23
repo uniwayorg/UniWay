@@ -12,7 +12,10 @@ describe("Database Connection", () => {
 
     try {
       await import("@/lib/db");
-      expect(warnSpy).toHaveBeenCalledWith("⚠️ DATABASE_URL is not set. Database queries will fail at runtime.");
+      const callArg = warnSpy.mock.calls[0][0] as string;
+      const parsed = JSON.parse(callArg);
+      expect(parsed.level).toBe("warn");
+      expect(parsed.message).toBe("DATABASE_URL is not set. Database queries will fail at runtime.");
     } finally {
       warnSpy.mockRestore();
       if (originalEnv === undefined) {
