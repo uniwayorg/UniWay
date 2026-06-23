@@ -28,9 +28,20 @@ jobs:
 
       - run: bun install
 
+      - name: Check Neon secrets
+        id: check-secrets
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -z "${{ secrets.NEON_API_KEY }}" ] || [ -z "${{ secrets.NEON_PROJECT_ID }}" ]; then
+            echo "NEON_API_KEY or NEON_PROJECT_ID not set — skipping spatial tests"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create ephemeral Neon branch
         id: neon-branch
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.check-secrets.outputs.skip != 'true'
         run: |
           BRANCH_NAME="pr-${{ github.event.pull_request.number }}"
           RESPONSE=$(curl -sf -X POST \
@@ -68,22 +79,25 @@ jobs:
           echo "connection_uri=${CONNECTION_URI}" >> "$GITHUB_OUTPUT"
 
       - name: Run migrations
+        if: steps.check-secrets.outputs.skip != 'true' || github.event_name == 'push'
         run: bun run migrate
         env:
           DATABASE_URL: ${{ steps.neon-branch.outputs.connection_uri || secrets.DATABASE_URL }}
 
       - name: Seed data
+        if: steps.check-secrets.outputs.skip != 'true' || github.event_name == 'push'
         run: bun run db:seed
         env:
           DATABASE_URL: ${{ steps.neon-branch.outputs.connection_uri || secrets.DATABASE_URL }}
 
       - name: Validate PostGIS spatial queries
+        if: steps.check-secrets.outputs.skip != 'true' || github.event_name == 'push'
         run: bun run validate:spatial
         env:
           DATABASE_URL: ${{ steps.neon-branch.outputs.connection_uri || secrets.DATABASE_URL }}
 
       - name: Cleanup ephemeral Neon branch
-        if: always() && steps.neon-branch.outputs.branch_id != ''
+        if: always() && steps.check-secrets.outputs.skip == 'false' && steps.neon-branch.outputs.branch_id != ''
         run: |
           curl -sf -X DELETE \
             "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches/${{ steps.neon-branch.outputs.branch_id }}" \
