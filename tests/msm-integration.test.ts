@@ -23,7 +23,7 @@ describe("API integration (MSW)", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.data[0].name).toBe("CS Lab");
+    expect(json.data[0].name).toBe("CS Lecture Hall");
   });
 
   it("GET /api/campus/:id/buildings returns buildings", async () => {
@@ -73,7 +73,7 @@ describe("API integration (MSW)", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.data[0].name).toBe("CS Lab");
+    expect(json.data[0].name).toBe("CS Lecture Hall");
   });
 
   it("POST /api/report creates a report", async () => {

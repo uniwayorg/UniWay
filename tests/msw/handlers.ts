@@ -1,48 +1,51 @@
 import { http, HttpResponse } from "msw";
+import { campus, buildings, rooms, pois, csLecturePoi, CAMPUS_ID, ENG_BLDG_ID } from "@/tests/fixtures/sample-campus";
 import { mockPolygon } from "@/tests/fixtures/geojson";
 
 export const handlers = [
   http.get("*/api/campus", () =>
-    HttpResponse.json({
-      data: [
-        { id: "123e4567-e89b-12d3-a456-426614174000", name: "Main Campus", bounds: mockPolygon },
-      ],
-    })
+    HttpResponse.json({ data: [campus] })
   ),
 
   http.get("*/api/campus/:id", ({ params }) =>
     HttpResponse.json({
       data: {
         campus: { id: params.id, name: "Main Campus", bounds: mockPolygon },
-        buildings: [],
-        poiCounts: [],
+        buildings: buildings.map((b) => ({ id: b.id, name: b.name, outline: b.outline, floors: ["1", "2"] })),
+        poiCounts: [
+          { category: "lecture_hall", count: 1 },
+          { category: "lab", count: 2 },
+          { category: "cafeteria", count: 1 },
+          { category: "office", count: 1 },
+          { category: "restroom", count: 1 },
+        ],
       },
     })
   ),
 
   http.get("*/api/campus/:id/pois", () =>
-    HttpResponse.json({
-      data: [
-        { id: "123e4567-e89b-12d3-a456-426614174001", room_id: "123e4567-e89b-12d3-a456-426614174002", name: "CS Lab", category: "lab", tags: [] },
-      ],
-    })
+    HttpResponse.json({ data: pois })
   ),
 
   http.get("*/api/campus/:id/buildings", () =>
-    HttpResponse.json({
-      data: [
-        { id: "123e4567-e89b-12d3-a456-426614174001", campus_id: "123e4567-e89b-12d3-a456-426614174000", name: "Engineering Building", outline: mockPolygon },
-      ],
-    })
+    HttpResponse.json({ data: buildings })
   ),
 
   http.get("*/api/campus/:id/rooms", () =>
-    HttpResponse.json({
-      data: [
-        { id: "123e4567-e89b-12d3-a456-426614174002", building_id: "123e4567-e89b-12d3-a456-426614174001", floor: "1", name: "101" },
-      ],
-    })
+    HttpResponse.json({ data: rooms.map((r) => ({ id: r.id, building_id: r.building_id, floor: r.floor, name: r.name })) })
   ),
+
+  http.get("*/api/campus/:id/nearby", ({ request }) => {
+    const url = new URL(request.url);
+    if (!url.searchParams.has("lat") || !url.searchParams.has("lng")) {
+      return HttpResponse.json({ error: "Missing or invalid parameters", code: "BAD_REQUEST", requestId: "test" }, { status: 400 });
+    }
+    const type = url.searchParams.get("type");
+    if (type === "rooms") {
+      return HttpResponse.json({ data: rooms.slice(0, 2) });
+    }
+    return HttpResponse.json({ data: pois.slice(0, 2) });
+  }),
 
   http.get("*/api/campus/:id/route", () =>
     HttpResponse.json({
@@ -53,6 +56,39 @@ export const handlers = [
       },
     })
   ),
+
+  http.get("*/api/pois/:id", ({ params }) => {
+    const poi = pois.find((p) => p.id === params.id);
+    if (!poi) {
+      return HttpResponse.json({ error: "POI not found", code: "NOT_FOUND", requestId: "test" }, { status: 404 });
+    }
+    const room = rooms.find((r) => r.id === poi.room_id);
+    return HttpResponse.json({
+      data: {
+        ...poi,
+        room_name: room?.name ?? "",
+        floor: room?.floor ?? "",
+        building_id: ENG_BLDG_ID,
+        building_name: "Engineering Building",
+      },
+    });
+  }),
+
+  http.get("*/api/rooms/:id", ({ params }) => {
+    const room = rooms.find((r) => r.id === params.id);
+    if (!room) {
+      return HttpResponse.json({ error: "Room not found", code: "NOT_FOUND", requestId: "test" }, { status: 404 });
+    }
+    const building = buildings.find((b) => b.id === room.building_id);
+    return HttpResponse.json({
+      data: {
+        ...room,
+        building_name: building?.name ?? "",
+        campus_id: CAMPUS_ID,
+        campus_name: "Main Campus",
+      },
+    });
+  }),
 
   http.get("*/api/route", ({ request }) => {
     const url = new URL(request.url);
@@ -75,7 +111,7 @@ export const handlers = [
     }
     return HttpResponse.json({
       data: [
-        { id: "123e4567-e89b-12d3-a456-426614174001", room_id: "123e4567-e89b-12d3-a456-426614174002", name: "CS Lab", category: "lab", tags: ["computers"], rank: 0.12 },
+        { ...csLecturePoi, rank: 0.12 },
       ],
     });
   }),
