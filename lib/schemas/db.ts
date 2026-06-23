@@ -91,7 +91,9 @@ export const ObstructionReportSchema = z.object({
   room_id: z.string().uuid().nullable(),
   edge_id: z.string().uuid().nullable(),
   description: z.string(),
+  status: z.enum(["open", "resolved", "dismissed"]),
   reported_at: z.date(),
+  resolved_at: z.date().nullable(),
 });
 export type ObstructionReport = z.infer<typeof ObstructionReportSchema>;
 

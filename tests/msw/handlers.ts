@@ -123,7 +123,7 @@ export const handlers = [
     }
     return HttpResponse.json(
       {
-        data: { id: "123e4567-e89b-12d3-a456-426614174000", room_id: null, edge_id: null, description: body.description, reported_at: "2026-01-01T00:00:00.000Z" },
+        data: { id: "123e4567-e89b-12d3-a456-426614174000", room_id: null, edge_id: null, description: body.description, status: "open", reported_at: "2026-01-01T00:00:00.000Z", resolved_at: null },
       },
       { status: 201 }
     );

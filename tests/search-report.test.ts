@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET as searchPois } from "@/app/api/search/route";
 import { POST as createReport } from "@/app/api/report/route";
+import { GET as listCampusReports } from "@/app/api/campus/[id]/reports/route";
 import { sql } from "@/lib/db";
 
 vi.mock("@/lib/db", () => ({
@@ -119,7 +120,7 @@ describe("POST /api/report", () => {
   });
 
   it("creates a report successfully", async () => {
-    const mockReport = { id: "123e4567-e89b-12d3-a456-426614174000", room_id: "123e4567-e89b-12d3-a456-426614174001", edge_id: null, description: "Door blocked", reported_at: new Date() };
+    const mockReport = { id: "123e4567-e89b-12d3-a456-426614174000", room_id: "123e4567-e89b-12d3-a456-426614174001", edge_id: null, description: "Door blocked", status: "open", reported_at: new Date(), resolved_at: null };
     mockSql.mockResolvedValueOnce([mockReport]);
 
     const headers = new Headers({ "content-length": "100" });
@@ -135,6 +136,46 @@ describe("POST /api/report", () => {
 
     const headers = new Headers({ "content-length": "100" });
     const response = await createReport(new Request("http://localhost", { method: "POST", headers, body: JSON.stringify(validBody) }));
+    expect(response.status).toBe(500);
+  });
+});
+
+describe("GET /api/campus/[id]/reports", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns open reports with pagination", async () => {
+    const mockRows = [
+      { id: "123e4567-e89b-12d3-a456-426614174003", room_id: "123e4567-e89b-12d3-a456-426614174001", edge_id: null, description: "Door blocked", status: "open", reported_at: new Date("2026-01-02"), resolved_at: null },
+    ];
+    mockSql.mockResolvedValueOnce([{ total: 1 }]);
+    mockSql.mockResolvedValueOnce(mockRows);
+
+    const response = await listCampusReports(req("http://localhost/api/campus/campus-1/reports"), { params: Promise.resolve({ id: "campus-1" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.data).toHaveLength(1);
+    expect(json.data[0].status).toBe("open");
+    expect(json.pagination).toEqual({ offset: 0, limit: 20, total: 1 });
+  });
+
+  it("filters by status", async () => {
+    mockSql.mockResolvedValueOnce([{ total: 0 }]);
+    mockSql.mockResolvedValueOnce([]);
+
+    const response = await listCampusReports(req("http://localhost/api/campus/campus-1/reports?status=resolved"), { params: Promise.resolve({ id: "campus-1" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.data).toHaveLength(0);
+  });
+
+  it("handles errors gracefully", async () => {
+    mockSql.mockRejectedValueOnce(new Error("DB Error"));
+
+    const response = await listCampusReports(req("http://localhost/api/campus/campus-1/reports"), { params: Promise.resolve({ id: "campus-1" }) });
     expect(response.status).toBe(500);
   });
 });

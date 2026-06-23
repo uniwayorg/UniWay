@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createObstructionReport } from "@/lib/spatial/reports";
+import { createObstructionReport, fetchCampusReports } from "@/lib/spatial/reports";
 import { sql } from "@/lib/db";
 
 vi.mock("@/lib/db", () => {
@@ -18,7 +18,9 @@ describe("Spatial Queries - Reports", () => {
       room_id: "123e4567-e89b-12d3-a456-426614174001",
       edge_id: null,
       description: "Door blocked",
+      status: "open",
       reported_at: new Date("2026-01-01T00:00:00.000Z"),
+      resolved_at: null,
     };
 
     (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([mockReport]);
@@ -30,6 +32,8 @@ describe("Spatial Queries - Reports", () => {
 
     expect(result.description).toBe("Door blocked");
     expect(result.room_id).toBe("123e4567-e89b-12d3-a456-426614174001");
+    expect(result.status).toBe("open");
+    expect(result.resolved_at).toBeNull();
   });
 
   it("creates a report with optional GPS location", async () => {
@@ -38,7 +42,9 @@ describe("Spatial Queries - Reports", () => {
       room_id: null,
       edge_id: "123e4567-e89b-12d3-a456-426614174002",
       description: "Stairs blocked",
+      status: "open",
       reported_at: new Date("2026-01-01T00:00:00.000Z"),
+      resolved_at: null,
     };
 
     (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([mockReport]);
@@ -53,5 +59,34 @@ describe("Spatial Queries - Reports", () => {
     expect(result.edge_id).toBe("123e4567-e89b-12d3-a456-426614174002");
     const sqlCallStrings = (sql as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0] as string[];
     expect(sqlCallStrings.join("")).toContain("ST_MakePoint");
+  });
+
+  it("fetches open reports for a campus", async () => {
+    const mockRows = [
+      { id: "123e4567-e89b-12d3-a456-426614174003", room_id: "123e4567-e89b-12d3-a456-426614174001", edge_id: null, description: "Door blocked", status: "open", reported_at: new Date("2026-01-02"), resolved_at: null },
+      { id: "123e4567-e89b-12d3-a456-426614174004", room_id: null, edge_id: "123e4567-e89b-12d3-a456-426614174002", description: "Corridor blocked", status: "open", reported_at: new Date("2026-01-01"), resolved_at: null },
+    ];
+
+    (sql as unknown as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce([{ total: 2 }])
+      .mockResolvedValueOnce(mockRows);
+
+    const { reports, total } = await fetchCampusReports("campus-1", "open", 0, 20);
+
+    expect(total).toBe(2);
+    expect(reports).toHaveLength(2);
+    expect(reports[0].status).toBe("open");
+    expect(reports[1].description).toBe("Corridor blocked");
+  });
+
+  it("returns empty when no reports match", async () => {
+    (sql as unknown as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce([{ total: 0 }])
+      .mockResolvedValueOnce([]);
+
+    const { reports, total } = await fetchCampusReports("campus-1", "resolved");
+
+    expect(total).toBe(0);
+    expect(reports).toHaveLength(0);
   });
 });
