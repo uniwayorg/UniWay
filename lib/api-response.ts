@@ -18,6 +18,7 @@ export const ApiErrorCode = {
   NOT_FOUND: "NOT_FOUND",
   INTERNAL_ERROR: "INTERNAL_ERROR",
   VALIDATION_ERROR: "VALIDATION_ERROR",
+  PAYLOAD_TOO_LARGE: "PAYLOAD_TOO_LARGE",
 } as const;
 
 export type ApiErrorCodeType = (typeof ApiErrorCode)[keyof typeof ApiErrorCode];
@@ -99,6 +100,40 @@ export function badRequest(
   const body: Record<string, unknown> = { error: message, code: code ?? ApiErrorCode.BAD_REQUEST, requestId };
   if (details && details.length > 0) body.details = details;
   return NextResponse.json(body, { status: 400, headers: { "X-Request-Id": requestId } });
+}
+
+export async function validateBodySize(request: Request, maxBytes: number): Promise<{ ok: true; body: string } | { ok: false; response: NextResponse }> {
+  const contentLength = parseInt(request.headers.get("content-length") ?? "0", 10);
+  if (contentLength > maxBytes) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error: `Request body exceeds maximum size of ${maxBytes} bytes`,
+          code: ApiErrorCode.PAYLOAD_TOO_LARGE,
+          requestId: request.headers.get("x-request-id") ?? crypto.randomUUID(),
+        },
+        { status: 413, headers: { "X-Request-Id": request.headers.get("x-request-id") ?? crypto.randomUUID() } }
+      ),
+    };
+  }
+
+  const body = await request.text();
+  if (body.length > maxBytes) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error: `Request body exceeds maximum size of ${maxBytes} bytes`,
+          code: ApiErrorCode.PAYLOAD_TOO_LARGE,
+          requestId: request.headers.get("x-request-id") ?? crypto.randomUUID(),
+        },
+        { status: 413, headers: { "X-Request-Id": request.headers.get("x-request-id") ?? crypto.randomUUID() } }
+      ),
+    };
+  }
+
+  return { ok: true, body };
 }
 
 export function notFound(

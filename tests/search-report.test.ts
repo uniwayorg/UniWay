@@ -99,10 +99,10 @@ describe("POST /api/report", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 400 if body too large", async () => {
+  it("returns 413 if content-length exceeds limit", async () => {
     const largeBody = "x".repeat(20_000);
     const response = await createReport(new Request("http://localhost", { method: "POST", body: largeBody }));
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(413);
   });
 
   it("returns 400 if body is invalid JSON", async () => {
