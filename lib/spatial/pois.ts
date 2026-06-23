@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import { POISchema, type POI } from "@/lib/schemas/db";
+import { z } from "zod";
 
 export async function fetchPois(
   campusId: string,
@@ -28,4 +29,34 @@ export async function fetchPois(
 
   const pois = rows.map((row: Record<string, unknown>) => POISchema.parse(row));
   return { pois, total };
+}
+
+const PoiDetailSchema = POISchema.extend({
+  room_name: z.string(),
+  floor: z.string(),
+  building_id: z.string().uuid(),
+  building_name: z.string(),
+});
+export type PoiDetail = z.infer<typeof PoiDetailSchema>;
+
+export async function fetchPoiById(poiId: string): Promise<PoiDetail | null> {
+  const result = await sql`
+    SELECT
+      p.id,
+      p.room_id,
+      p.name,
+      p.category,
+      p.tags,
+      r.name AS room_name,
+      r.floor,
+      b.id AS building_id,
+      b.name AS building_name
+    FROM pois p
+    JOIN rooms r ON p.room_id = r.id
+    JOIN buildings b ON r.building_id = b.id
+    WHERE p.id = ${poiId}
+  `;
+
+  if (result.length === 0) return null;
+  return PoiDetailSchema.parse(result[0]);
 }

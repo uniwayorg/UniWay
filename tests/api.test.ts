@@ -8,10 +8,14 @@ import { GET as getCampusRoute } from "@/app/api/campus/[id]/route/route";
 import { GET as getPois } from "@/app/api/campus/[id]/pois/route";
 import { GET as getRoute } from "@/app/api/route/route";
 import { GET as getNearby } from "@/app/api/campus/[id]/nearby/route";
+import { GET as getRoomDetail } from "@/app/api/rooms/[id]/route";
+import { GET as getPoiDetail } from "@/app/api/pois/[id]/route";
 import { sql } from "@/lib/db";
 import { getNearestRoom } from "@/lib/spatial/knn";
 import { findShortestPath } from "@/lib/routing/graph";
 import { isPointInCampus } from "@/lib/spatial/campus";
+import { fetchRoomById } from "@/lib/spatial/rooms";
+import { fetchPoiById } from "@/lib/spatial/pois";
 import { mockPolygon, mockPoint } from "./fixtures/geojson";
 
 vi.mock("@/lib/db", () => ({
@@ -34,6 +38,22 @@ vi.mock("@/lib/spatial/campus", async () => {
   };
 });
 
+vi.mock("@/lib/spatial/rooms", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/spatial/rooms")>("@/lib/spatial/rooms");
+  return {
+    ...actual,
+    fetchRoomById: vi.fn(),
+  };
+});
+
+vi.mock("@/lib/spatial/pois", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/spatial/pois")>("@/lib/spatial/pois");
+  return {
+    ...actual,
+    fetchPoiById: vi.fn(),
+  };
+});
+
 vi.mock("@/lib/rate-limit", () => ({
   withRateLimit: vi.fn().mockReturnValue(null),
 }));
@@ -41,6 +61,8 @@ vi.mock("@/lib/rate-limit", () => ({
 const mockSql = sql as unknown as ReturnType<typeof vi.fn>;
 const mockGetNearestRoom = getNearestRoom as unknown as ReturnType<typeof vi.fn>;
 const mockFindShortestPath = findShortestPath as unknown as ReturnType<typeof vi.fn>;
+const mockFetchRoomById = fetchRoomById as unknown as ReturnType<typeof vi.fn>;
+const mockFetchPoiById = fetchPoiById as unknown as ReturnType<typeof vi.fn>;
 const req = (url = "http://localhost") => new Request(url);
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
 const TEST_ROOM_ID = "123e4567-e89b-12d3-a456-426614174003";
@@ -268,6 +290,87 @@ describe("API Routes", () => {
       mockIsPointInCampus.mockRejectedValueOnce(new Error("DB Error"));
 
       const response = await getNearby(req("http://localhost/api/campus/campus-1/nearby?lat=40.74&lng=-73.98"), params("campus-1"));
+      expect(response.status).toBe(500);
+    });
+  });
+
+  describe("GET /api/rooms/[id]", () => {
+    it("returns room with building and campus context", async () => {
+      const mockRoom = {
+        id: "123e4567-e89b-12d3-a456-426614174003",
+        building_id: "123e4567-e89b-12d3-a456-426614174001",
+        floor: "1",
+        name: "101",
+        geom: mockPolygon,
+        centroid: mockPoint,
+        building_name: "Engineering Building",
+        campus_id: "123e4567-e89b-12d3-a456-426614174000",
+        campus_name: "Main Campus",
+      };
+      mockFetchRoomById.mockResolvedValueOnce(mockRoom);
+
+      const response = await getRoomDetail(req(), params("123e4567-e89b-12d3-a456-426614174003"));
+      const json = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(json.data.name).toBe("101");
+      expect(json.data.building_name).toBe("Engineering Building");
+      expect(json.data.campus_name).toBe("Main Campus");
+      expect(json.data.geom.type).toBe("Polygon");
+      expect(json.data.centroid.type).toBe("Point");
+    });
+
+    it("returns 404 if room not found", async () => {
+      mockFetchRoomById.mockResolvedValueOnce(null);
+
+      const response = await getRoomDetail(req(), params("123e4567-e89b-12d3-a456-426614174003"));
+      expect(response.status).toBe(404);
+    });
+
+    it("handles errors gracefully", async () => {
+      mockFetchRoomById.mockRejectedValueOnce(new Error("DB Error"));
+
+      const response = await getRoomDetail(req(), params("123e4567-e89b-12d3-a456-426614174003"));
+      expect(response.status).toBe(500);
+    });
+  });
+
+  describe("GET /api/pois/[id]", () => {
+    it("returns POI with room and building context", async () => {
+      const mockPoi = {
+        id: "123e4567-e89b-12d3-a456-426614174001",
+        room_id: "123e4567-e89b-12d3-a456-426614174003",
+        name: "CS Lab",
+        category: "lab",
+        tags: ["computer", "research"],
+        room_name: "101",
+        floor: "1",
+        building_id: "123e4567-e89b-12d3-a456-426614174001",
+        building_name: "Engineering Building",
+      };
+      mockFetchPoiById.mockResolvedValueOnce(mockPoi);
+
+      const response = await getPoiDetail(req(), params("123e4567-e89b-12d3-a456-426614174001"));
+      const json = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(json.data.name).toBe("CS Lab");
+      expect(json.data.room_name).toBe("101");
+      expect(json.data.building_name).toBe("Engineering Building");
+      expect(json.data.tags).toEqual(["computer", "research"]);
+    });
+
+    it("returns 404 if POI not found", async () => {
+      mockFetchPoiById.mockResolvedValueOnce(null);
+
+      const response = await getPoiDetail(req(), params("123e4567-e89b-12d3-a456-426614174001"));
+      expect(response.status).toBe(404);
+    });
+
+    it("handles errors gracefully", async () => {
+      mockFetchPoiById.mockRejectedValueOnce(new Error("DB Error"));
+
+      const response = await getPoiDetail(req(), params("123e4567-e89b-12d3-a456-426614174001"));
       expect(response.status).toBe(500);
     });
   });

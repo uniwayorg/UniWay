@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { RoomSchema } from "@/lib/schemas/db";
 import { z } from "zod";
 
 const RoomListItemSchema = z.object({
@@ -48,6 +49,35 @@ export async function getCampusIdForRoom(roomId: string): Promise<string | null>
   `;
 
   return result[0]?.campus_id ?? null;
+}
+
+const RoomDetailSchema = RoomSchema.extend({
+  building_name: z.string(),
+  campus_id: z.string().uuid(),
+  campus_name: z.string(),
+});
+export type RoomDetail = z.infer<typeof RoomDetailSchema>;
+
+export async function fetchRoomById(roomId: string): Promise<RoomDetail | null> {
+  const result = await sql`
+    SELECT
+      r.id,
+      r.building_id,
+      r.floor,
+      r.name,
+      ST_AsGeoJSON(r.geom)::json AS geom,
+      ST_AsGeoJSON(r.centroid)::json AS centroid,
+      b.name AS building_name,
+      c.id AS campus_id,
+      c.name AS campus_name
+    FROM rooms r
+    JOIN buildings b ON r.building_id = b.id
+    JOIN campuses c ON b.campus_id = c.id
+    WHERE r.id = ${roomId}
+  `;
+
+  if (result.length === 0) return null;
+  return RoomDetailSchema.parse(result[0]);
 }
 
 export async function fetchRoomCentroidsForCampus(
