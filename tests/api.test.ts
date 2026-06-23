@@ -147,6 +147,31 @@ describe("API Routes", () => {
     });
   });
 
+  describe("GET /api/campus/[id]/pois category filter", () => {
+    it("filters POIs by category", async () => {
+      const mockPoi = { id: "123e4567-e89b-12d3-a456-426614174001", room_id: "123e4567-e89b-12d3-a456-426614174002", name: "CS Lab", category: "lab", tags: [] };
+      mockSql.mockResolvedValueOnce([{ total: 1 }]);
+      mockSql.mockResolvedValueOnce([mockPoi]);
+
+      const response = await getPois(req("http://localhost/api/campus/campus-1/pois?category=lab"), params("campus-1"));
+      const json = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(json.data[0].category).toBe("lab");
+    });
+
+    it("returns results for unknown category when empty", async () => {
+      mockSql.mockResolvedValueOnce([{ total: 0 }]);
+      mockSql.mockResolvedValueOnce([]);
+
+      const response = await getPois(req("http://localhost/api/campus/campus-1/pois?category=nonexistent"), params("campus-1"));
+      const json = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(json.data).toHaveLength(0);
+    });
+  });
+
   describe("GET /api/campus/[id]", () => {
     it("returns 404 if campus not found", async () => {
       mockSql.mockResolvedValueOnce([]);

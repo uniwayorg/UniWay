@@ -26,6 +26,9 @@ describe("Spatial Queries - Search", () => {
       category: "lab",
       tags: ["computers"],
       rank: 0.12,
+      floor: "1",
+      building_id: "123e4567-e89b-12d3-a456-426614174001",
+      building_name: "Engineering Building",
     };
 
     (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ total: 1 }]); // COUNT
@@ -51,5 +54,49 @@ describe("Spatial Queries - Search", () => {
     expect(results).toEqual([]);
     const sqlCall = (sql as unknown as ReturnType<typeof vi.fn>).mock.calls[1];
     expect(sqlCall).toContain(50);
+  });
+
+  it("filters by category when provided", async () => {
+    const mockResult = {
+      id: "123e4567-e89b-12d3-a456-426614174001",
+      room_id: "123e4567-e89b-12d3-a456-426614174002",
+      name: "CS Lab",
+      category: "lab",
+      tags: ["computers"],
+      rank: 0.12,
+      floor: "1",
+      building_id: "123e4567-e89b-12d3-a456-426614174001",
+      building_name: "Engineering Building",
+    };
+    (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ total: 1 }]);
+    (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([mockResult]);
+
+    const { results, total } = await searchPois("123e4567-e89b-12d3-a456-426614174000", "cs", 20, 0, "lab");
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.category).toBe("lab");
+    expect(total).toBe(1);
+  });
+
+  it("returns enriched results with floor, building_id, building_name", async () => {
+    const mockResult = {
+      id: "123e4567-e89b-12d3-a456-426614174001",
+      room_id: "123e4567-e89b-12d3-a456-426614174002",
+      name: "CS Lab",
+      category: "lab",
+      tags: ["computers"],
+      rank: 0.12,
+      floor: "2",
+      building_id: "123e4567-e89b-12d3-a456-426614174001",
+      building_name: "Science Hall",
+    };
+    (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ total: 1 }]);
+    (sql as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([mockResult]);
+
+    const { results } = await searchPois("123e4567-e89b-12d3-a456-426614174000", "cs");
+
+    expect(results[0]?.floor).toBe("2");
+    expect(results[0]?.building_id).toBe("123e4567-e89b-12d3-a456-426614174001");
+    expect(results[0]?.building_name).toBe("Science Hall");
   });
 });

@@ -5,8 +5,13 @@ import { z } from "zod";
 export async function fetchPois(
   campusId: string,
   offset = 0,
-  limit = 20
+  limit = 20,
+  category?: string
 ): Promise<{ pois: POI[]; total: number }> {
+  if (category) {
+    return fetchPoisWithCategory(campusId, offset, limit, category);
+  }
+
   const [countRow] = await sql`
     SELECT COUNT(*) AS total
     FROM pois p
@@ -29,6 +34,35 @@ export async function fetchPois(
 
   const pois = rows.map((row: Record<string, unknown>) => POISchema.parse(row));
   return { pois, total };
+}
+
+async function fetchPoisWithCategory(
+  campusId: string,
+  offset: number,
+  limit: number,
+  category: string
+): Promise<{ pois: POI[]; total: number }> {
+  const [countRow] = await sql`
+    SELECT COUNT(*) AS total
+    FROM pois p
+    JOIN rooms r ON p.room_id = r.id
+    JOIN buildings b ON r.building_id = b.id
+    WHERE b.campus_id = ${campusId} AND p.category = ${category}
+  `;
+  const total = Number(countRow?.total ?? 0);
+
+  const rows = await sql`
+    SELECT p.*
+    FROM pois p
+    JOIN rooms r ON p.room_id = r.id
+    JOIN buildings b ON r.building_id = b.id
+    WHERE b.campus_id = ${campusId} AND p.category = ${category}
+    ORDER BY p.name ASC
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `;
+
+  return { pois: rows.map((row: Record<string, unknown>) => POISchema.parse(row)), total };
 }
 
 const PoiDetailSchema = POISchema.extend({

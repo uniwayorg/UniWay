@@ -35,7 +35,7 @@ describe("GET /api/search", () => {
   });
 
   it("returns results with pagination", async () => {
-    const mockResult = { id: "123e4567-e89b-12d3-a456-426614174001", room_id: "123e4567-e89b-12d3-a456-426614174002", name: "CS Lab", category: "lab", tags: [], rank: 0.5 };
+    const mockResult = { id: "123e4567-e89b-12d3-a456-426614174001", room_id: "123e4567-e89b-12d3-a456-426614174002", name: "CS Lab", category: "lab", tags: [], rank: 0.5, floor: "1", building_id: "123e4567-e89b-12d3-a456-426614174001", building_name: "Engineering Building" };
     mockSql.mockResolvedValueOnce([{ total: 1 }]);
     mockSql.mockResolvedValueOnce([mockResult]);
 
@@ -45,6 +45,8 @@ describe("GET /api/search", () => {
     expect(response.status).toBe(200);
     expect(json.data).toHaveLength(1);
     expect(json.data[0].name).toBe("CS Lab");
+    expect(json.data[0].floor).toBe("1");
+    expect(json.data[0].building_name).toBe("Engineering Building");
     expect(json.pagination).toEqual({ offset: 0, limit: 20, total: 1 });
   });
 

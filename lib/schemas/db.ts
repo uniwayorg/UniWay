@@ -52,11 +52,22 @@ export const POISchema = z.object({
 });
 export type POI = z.infer<typeof POISchema>;
 
-// POI search result (includes ts_rank)
+// POI search result (includes ts_rank + room/building context)
 export const POISearchResultSchema = POISchema.extend({
   rank: z.number(),
+  floor: z.string(),
+  building_id: z.string().uuid(),
+  building_name: z.string(),
 });
 export type POISearchResult = z.infer<typeof POISearchResultSchema>;
+
+// POI suggest result (minimal)
+export const POISuggestResultSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  category: z.string(),
+});
+export type POISuggestResult = z.infer<typeof POISuggestResultSchema>;
 
 // Campus metadata (campus + buildings + POI counts)
 export const CampusMetadataSchema = z.object({

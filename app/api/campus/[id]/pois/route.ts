@@ -15,8 +15,9 @@ export async function GET(
     const { id: campusId } = await params;
     const { searchParams } = new URL(request.url);
     const pagination = parsePagination(searchParams, 20, 100);
+    const category = searchParams.get("category") ?? undefined;
 
-    const { pois, total } = await fetchPois(campusId, pagination.offset, pagination.limit);
+    const { pois, total } = await fetchPois(campusId, pagination.offset, pagination.limit, category);
     return paginatedResponse(pois, total, pagination);
   } catch (error) {
     return apiError(error, "Failed to fetch POIs", request);

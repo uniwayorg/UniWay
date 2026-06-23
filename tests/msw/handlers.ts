@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { campus, buildings, rooms, pois, csLecturePoi, CAMPUS_ID, ENG_BLDG_ID } from "@/tests/fixtures/sample-campus";
+import { campus, buildings, rooms, pois, csLecturePoi, CAMPUS_ID, ENG_BLDG_ID, ENG_101_ID } from "@/tests/fixtures/sample-campus";
 import { mockPolygon } from "@/tests/fixtures/geojson";
 
 export const handlers = [
@@ -111,7 +111,7 @@ export const handlers = [
     }
     return HttpResponse.json({
       data: [
-        { ...csLecturePoi, rank: 0.12 },
+        { ...csLecturePoi, rank: 0.12, floor: "1", building_id: ENG_BLDG_ID, building_name: "Engineering Building" },
       ],
     });
   }),

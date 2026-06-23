@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 const SearchQuerySchema = z.object({
   q: z.string().min(1),
   campus: z.string().uuid(),
+  category: z.string().optional(),
 });
 
 export async function GET(request: Request) {
@@ -19,6 +20,7 @@ export async function GET(request: Request) {
     const parsed = SearchQuerySchema.safeParse({
       q: searchParams.get("q") ?? "",
       campus: searchParams.get("campus") ?? "",
+      category: searchParams.get("category") ?? undefined,
     });
 
     if (!parsed.success) {
@@ -30,7 +32,8 @@ export async function GET(request: Request) {
       parsed.data.campus,
       parsed.data.q,
       pagination.limit,
-      pagination.offset
+      pagination.offset,
+      parsed.data.category
     );
 
     return paginatedResponse(results, total, pagination);
