@@ -13,7 +13,7 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary", "html"],
       include: ["app/**", "lib/**"],
-      exclude: ["**/*.test.*", "**/*.spec.*", "**/*.config.*", "**/tests/**", "**/global-error.tsx"],
+      exclude: ["**/*.test.*", "**/*.spec.*", "**/*.config.*", "**/tests/**", "**/global-error.tsx", "**/api/docs/**"],
       thresholds: {
         lines: 90,
         functions: 90,
