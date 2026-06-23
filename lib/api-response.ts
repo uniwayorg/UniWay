@@ -28,6 +28,8 @@ export interface PaginationParams {
   limit: number;
 }
 
+const MAX_OFFSET = 10_000;
+
 export function parsePagination(
   searchParams: URLSearchParams,
   defaultLimit = 20,
@@ -35,7 +37,10 @@ export function parsePagination(
 ): PaginationParams {
   const rawOffset = parseInt(searchParams.get("offset") || "", 10);
   const rawLimit = parseInt(searchParams.get("limit") || "", 10);
-  const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+  const offset = Math.min(
+    Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0,
+    MAX_OFFSET
+  );
   const limit = Math.min(
     Number.isFinite(rawLimit) && rawLimit >= 1 ? rawLimit : defaultLimit,
     maxLimit
