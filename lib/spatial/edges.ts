@@ -17,7 +17,9 @@ export async function fetchEdgesFromCampus(campusId: string): Promise<RoutingEdg
       e.target_node_id, 
       e.distance_meters, 
       e.is_accessible, 
-      e.floor_id 
+      e.floor_id,
+      ST_AsGeoJSON(e.geom)::json AS geom,
+      e.edge_type
     FROM routing_edges e
     JOIN rooms src ON e.source_node_id = src.id
     JOIN buildings b ON src.building_id = b.id

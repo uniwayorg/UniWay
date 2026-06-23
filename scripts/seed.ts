@@ -123,44 +123,48 @@ export async function seed() {
 
     console.log("🌱 Seeding Routing Edges...");
 
+    function edgeLineString(coords: [number, number][]): string {
+      return JSON.stringify({ type: "LineString", coordinates: coords });
+    }
+
     // Engineering Building floor 1 corridor
     await tx`
-      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id)
-      VALUES (${eng101.id}, ${eng102.id}, 10, true, '1')
+      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id, geom, edge_type)
+      VALUES (${eng101.id}, ${eng102.id}, 10, true, '1', ST_SetSRID(ST_GeomFromGeoJSON(${edgeLineString([[-73.98465, 40.74835], [-73.98445, 40.74835]])}), 4326), 'corridor')
     `;
     await tx`
-      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id)
-      VALUES (${eng102.id}, ${eng103.id}, 8, true, '1')
+      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id, geom, edge_type)
+      VALUES (${eng102.id}, ${eng103.id}, 8, true, '1', ST_SetSRID(ST_GeomFromGeoJSON(${edgeLineString([[-73.98445, 40.74835], [-73.98425, 40.74835]])}), 4326), 'corridor')
     `;
 
     // Engineering Building floor 2 corridor
     await tx`
-      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id)
-      VALUES (${eng201.id}, ${eng202.id}, 12, true, '2')
+      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id, geom, edge_type)
+      VALUES (${eng201.id}, ${eng202.id}, 12, true, '2', ST_SetSRID(ST_GeomFromGeoJSON(${edgeLineString([[-73.98465, 40.74855], [-73.98445, 40.74855]])}), 4326), 'corridor')
     `;
 
     // Engineering Building stair (not accessible)
     await tx`
-      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id)
-      VALUES (${eng101.id}, ${eng201.id}, 5, false, 'stairs')
+      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id, geom, edge_type)
+      VALUES (${eng101.id}, ${eng201.id}, 5, false, 'stairs', ST_SetSRID(ST_GeomFromGeoJSON(${edgeLineString([[-73.98465, 40.74835], [-73.98465, 40.74855]])}), 4326), 'stairs')
     `;
 
     // Engineering Building elevator (accessible)
     await tx`
-      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id)
-      VALUES (${eng102.id}, ${eng202.id}, 5, true, 'elevator')
+      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id, geom, edge_type)
+      VALUES (${eng102.id}, ${eng202.id}, 5, true, 'elevator', ST_SetSRID(ST_GeomFromGeoJSON(${edgeLineString([[-73.98445, 40.74835], [-73.98445, 40.74855]])}), 4326), 'elevator')
     `;
 
     // Science Hall floor 1 corridor
     await tx`
-      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id)
-      VALUES (${sci101.id}, ${sci102.id}, 10, true, '1')
+      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id, geom, edge_type)
+      VALUES (${sci101.id}, ${sci102.id}, 10, true, '1', ST_SetSRID(ST_GeomFromGeoJSON(${edgeLineString([[-73.98465, 40.74775], [-73.98445, 40.74775]])}), 4326), 'corridor')
     `;
 
     // Science Hall stair (not accessible)
     await tx`
-      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id)
-      VALUES (${sci101.id}, ${sci201.id}, 5, false, 'stairs')
+      INSERT INTO routing_edges (source_node_id, target_node_id, distance_meters, is_accessible, floor_id, geom, edge_type)
+      VALUES (${sci101.id}, ${sci201.id}, 5, false, 'stairs', ST_SetSRID(ST_GeomFromGeoJSON(${edgeLineString([[-73.98465, 40.74775], [-73.98465, 40.74795]])}), 4326), 'stairs')
     `;
 
     console.log("🌱 Seeding POIs...");

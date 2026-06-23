@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fetchEdgesFromCampus } from "@/lib/spatial/edges";
+import { RoutingEdgeSchema } from "@/lib/schemas/db";
 import { sql } from "@/lib/db";
 
 // Mock the postgres sql tag
@@ -57,5 +58,50 @@ describe("Data Contract - Routing Edges", () => {
 
     await expect(fetchEdgesFromCampus("123e4567-e89b-12d3-a456-426614174000"))
       .rejects.toThrow();
+  });
+
+  it("parses edge with geom and edge_type", () => {
+    const mockLineString = { type: "LineString", coordinates: [[-73.985, 40.748], [-73.984, 40.749]] };
+    const row = {
+      id: "123e4567-e89b-12d3-a456-426614174001",
+      source_node_id: "123e4567-e89b-12d3-a456-426614174002",
+      target_node_id: "123e4567-e89b-12d3-a456-426614174003",
+      distance_meters: 10,
+      is_accessible: true,
+      floor_id: "1",
+      geom: mockLineString,
+      edge_type: "corridor" as const,
+    };
+    const parsed = RoutingEdgeSchema.parse(row);
+    expect(parsed.geom?.type).toBe("LineString");
+    expect(parsed.geom?.coordinates).toHaveLength(2);
+    expect(parsed.edge_type).toBe("corridor");
+  });
+
+  it("parses edge without geom and edge_type (backward compat)", () => {
+    const row = {
+      id: "123e4567-e89b-12d3-a456-426614174001",
+      source_node_id: "123e4567-e89b-12d3-a456-426614174002",
+      target_node_id: "123e4567-e89b-12d3-a456-426614174003",
+      distance_meters: 10,
+      is_accessible: true,
+      floor_id: "1",
+    };
+    const parsed = RoutingEdgeSchema.parse(row);
+    expect(parsed.geom).toBeUndefined();
+    expect(parsed.edge_type).toBeUndefined();
+  });
+
+  it("rejects invalid edge_type", () => {
+    const row = {
+      id: "123e4567-e89b-12d3-a456-426614174001",
+      source_node_id: "123e4567-e89b-12d3-a456-426614174002",
+      target_node_id: "123e4567-e89b-12d3-a456-426614174003",
+      distance_meters: 10,
+      is_accessible: true,
+      floor_id: "1",
+      edge_type: "escalator",
+    };
+    expect(() => RoutingEdgeSchema.parse(row)).toThrow();
   });
 });

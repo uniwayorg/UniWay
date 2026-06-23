@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { GeoJSONPointSchema, GeoJSONPolygonSchema } from "@/lib/schemas/geojson";
+import { GeoJSONLineStringSchema, GeoJSONPointSchema, GeoJSONPolygonSchema } from "@/lib/schemas/geojson";
 
 // Base Schema for the Campus
 export const CampusSchema = z.object({
@@ -37,6 +37,8 @@ export const RoutingEdgeSchema = z.object({
   distance_meters: z.number().positive(),
   is_accessible: z.boolean(),
   floor_id: z.string(),
+  geom: GeoJSONLineStringSchema.optional(),
+  edge_type: z.enum(["corridor", "stairs", "elevator", "door"]).optional(),
 });
 export type RoutingEdge = z.infer<typeof RoutingEdgeSchema>;
 
