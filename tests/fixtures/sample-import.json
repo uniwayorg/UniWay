@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "type": "building", "name": "Engineering Building" },
+      "geometry": { "type": "Polygon", "coordinates": [[[-73.9848, 40.7482], [-73.9848, 40.7488], [-73.9842, 40.7488], [-73.9842, 40.7482], [-73.9848, 40.7482]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "type": "building", "name": "Science Hall" },
+      "geometry": { "type": "Polygon", "coordinates": [[[-73.9848, 40.7476], [-73.9848, 40.7481], [-73.9842, 40.7481], [-73.9842, 40.7476], [-73.9848, 40.7476]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "type": "room", "name": "101", "floor": "1", "building": "Engineering Building" },
+      "geometry": { "type": "Polygon", "coordinates": [[[-73.9847, 40.7483], [-73.9847, 40.7484], [-73.9846, 40.7484], [-73.9846, 40.7483], [-73.9847, 40.7483]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "type": "room", "name": "102", "floor": "1", "building": "Engineering Building" },
+      "geometry": { "type": "Polygon", "coordinates": [[[-73.9845, 40.7483], [-73.9845, 40.7484], [-73.9844, 40.7484], [-73.9844, 40.7483], [-73.9845, 40.7483]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "type": "corridor", "from": "101", "to": "102", "floor": "1", "is_accessible": true, "edge_type": "corridor" },
+      "geometry": { "type": "LineString", "coordinates": [[-73.98465, 40.74835], [-73.98445, 40.74835]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "type": "poi", "name": "CS Lab", "category": "lab", "room": "101", "tags": ["computers"] },
+      "geometry": { "type": "Point", "coordinates": [-73.98465, 40.74835] }
+    }
+  ]
+}
