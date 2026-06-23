@@ -3,6 +3,7 @@ import singletonLogger from "@/lib/logger";
 
 const connectionString = process.env.DATABASE_URL;
 const SLOW_QUERY_MS = parseInt(process.env.SLOW_QUERY_MS || "", 10) || 100;
+const STATEMENT_TIMEOUT_MS = parseInt(process.env.DATABASE_STATEMENT_TIMEOUT || "", 10) || 30_000;
 
 if (!connectionString) {
   singletonLogger.warn("DATABASE_URL is not set. Database queries will fail at runtime.");
@@ -20,7 +21,8 @@ const raw: postgres.Sql =
     idle_timeout: 20,
     connect_timeout: 10,
     ssl: "require",
-  });
+    statement_timeout: STATEMENT_TIMEOUT_MS,
+  } as Record<string, unknown>);
 
 if (process.env.NODE_ENV !== "production") {
   globalForPostgres.sql = raw;

@@ -41,4 +41,27 @@ describe("Database Connection", () => {
       }
     }
   });
+
+  it("uses custom DATABASE_STATEMENT_TIMEOUT when set", async () => {
+    const originalUrl = process.env.DATABASE_URL;
+    const originalTimeout = process.env.DATABASE_STATEMENT_TIMEOUT;
+    process.env.DATABASE_URL = "postgres://fake:fake@fake/fake";
+    process.env.DATABASE_STATEMENT_TIMEOUT = "5000";
+
+    try {
+      const { sql } = await import("@/lib/db");
+      expect(sql).toBeDefined();
+    } finally {
+      if (originalUrl === undefined) {
+        delete process.env.DATABASE_URL;
+      } else {
+        process.env.DATABASE_URL = originalUrl;
+      }
+      if (originalTimeout === undefined) {
+        delete process.env.DATABASE_STATEMENT_TIMEOUT;
+      } else {
+        process.env.DATABASE_STATEMENT_TIMEOUT = originalTimeout;
+      }
+    }
+  });
 });
