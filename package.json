@@ -41,7 +41,7 @@
     "@vitejs/plugin-react": "^6.0.2",
     "@vitest/coverage-v8": "^4.1.9",
     "dotenv-cli": "^11.0.0",
-    "eslint": "^10.5.0",
+    "eslint": "^10.6.0",
     "eslint-config-next": "^16.2.7",
     "happy-dom": "^20.10.6",
     "ley": "^0.8.1",
