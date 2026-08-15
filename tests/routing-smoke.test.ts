@@ -89,7 +89,7 @@ function createParams(id: string) {
   return { params: Promise.resolve({ id }) };
 }
 
-describe("UNI-88: Routing API Smoke Tests on Synthetic Graph", () => {
+describe("UNI-88 & UNI-89: Routing API Smoke and Remediation Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -121,6 +121,22 @@ describe("UNI-88: Routing API Smoke Tests on Synthetic Graph", () => {
 
       expect(json.data.geometry.coordinates.length).toBeGreaterThanOrEqual(4);
       expect(json.data.properties.distance_meters).toBeGreaterThan(0);
+    });
+
+    it("returns zero distance valid LineString when start node equals target node", async () => {
+      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=75.5620&fromLat=26.8420&toRoomId=30000000-0000-4000-8000-000000000001`;
+      const res = await getCampusRoute(createRequest(url), createParams(SYNTHETIC_CAMPUS_ID));
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+
+      expect(json.data.type).toBe("Feature");
+      expect(json.data.geometry.type).toBe("LineString");
+      expect(json.data.geometry.coordinates).toEqual([
+        [75.5620, 26.8420],
+        [75.5620, 26.8420],
+      ]);
+      expect(json.data.properties.distance_meters).toBe(0);
     });
   });
 
