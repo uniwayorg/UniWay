@@ -23,7 +23,7 @@
     "graphology": "^0.26.0",
     "graphology-shortest-path": "^2.1.0",
     "maplibre-gl": "^5.24.0",
-    "next": "^16.2.7",
+    "next": "^16.2.10",
     "pmtiles": "^4.3.0",
     "postgres": "^3.4.5",
     "react": "^19.1.0",
