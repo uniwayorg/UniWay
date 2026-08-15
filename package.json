@@ -47,7 +47,7 @@
     "happy-dom": "^20.10.6",
     "ley": "^0.8.1",
     "msw": "^2.14.6",
-    "tailwindcss": "^4.3.1",
+    "tailwindcss": "^4.3.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   }
