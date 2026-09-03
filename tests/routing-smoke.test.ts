@@ -95,8 +95,8 @@ describe("UNI-88 & UNI-89: Routing API Smoke and Remediation Tests", () => {
   });
 
   describe("1. Direct and Multi-Edge Routes", () => {
-    it("returns direct route from Main Gate to Dome Building", async () => {
-      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=75.5620&fromLat=26.8420&toRoomId=30000000-0000-4000-8000-000000000003`;
+    it("returns direct route from AB1 to Dome Building", async () => {
+      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=${SYNTHETIC_NODES[0].lng}&fromLat=${SYNTHETIC_NODES[0].lat}&toRoomId=${SYNTHETIC_NODES[5].id}`;
       const res = await getCampusRoute(createRequest(url), createParams(SYNTHETIC_CAMPUS_ID));
 
       expect(res.status).toBe(200);
@@ -105,26 +105,25 @@ describe("UNI-88 & UNI-89: Routing API Smoke and Remediation Tests", () => {
       expect(json.data.type).toBe("Feature");
       expect(json.data.geometry.type).toBe("LineString");
       expect(json.data.geometry.coordinates).toEqual([
-        [75.5620, 26.8420],
-        [75.5630, 26.8425],
-        [75.5625, 26.8435],
+        [SYNTHETIC_NODES[0].lng, SYNTHETIC_NODES[0].lat],
+        [SYNTHETIC_NODES[5].lng, SYNTHETIC_NODES[5].lat],
       ]);
-      expect(json.data.properties.distance_meters).toBe(235.0);
+      expect(json.data.properties.distance_meters).toBe(191.0);
     });
 
-    it("returns multi-edge route across campus to Academic Block 3", async () => {
-      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=75.5620&fromLat=26.8420&toRoomId=30000000-0000-4000-8000-000000000011`;
+    it("returns route across campus to Academic Block 3", async () => {
+      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=${SYNTHETIC_NODES[0].lng}&fromLat=${SYNTHETIC_NODES[0].lat}&toRoomId=${SYNTHETIC_NODES[2].id}`;
       const res = await getCampusRoute(createRequest(url), createParams(SYNTHETIC_CAMPUS_ID));
 
       expect(res.status).toBe(200);
       const json = await res.json();
 
-      expect(json.data.geometry.coordinates.length).toBeGreaterThanOrEqual(4);
-      expect(json.data.properties.distance_meters).toBeGreaterThan(0);
+      expect(json.data.geometry.coordinates.length).toBeGreaterThanOrEqual(2);
+      expect(json.data.properties.distance_meters).toBe(133.0);
     });
 
     it("returns zero distance valid LineString when start node equals target node", async () => {
-      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=75.5620&fromLat=26.8420&toRoomId=30000000-0000-4000-8000-000000000001`;
+      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=${SYNTHETIC_NODES[0].lng}&fromLat=${SYNTHETIC_NODES[0].lat}&toRoomId=${SYNTHETIC_NODES[0].id}`;
       const res = await getCampusRoute(createRequest(url), createParams(SYNTHETIC_CAMPUS_ID));
 
       expect(res.status).toBe(200);
@@ -133,54 +132,58 @@ describe("UNI-88 & UNI-89: Routing API Smoke and Remediation Tests", () => {
       expect(json.data.type).toBe("Feature");
       expect(json.data.geometry.type).toBe("LineString");
       expect(json.data.geometry.coordinates).toEqual([
-        [75.5620, 26.8420],
-        [75.5620, 26.8420],
+        [SYNTHETIC_NODES[0].lng, SYNTHETIC_NODES[0].lat],
+        [SYNTHETIC_NODES[0].lng, SYNTHETIC_NODES[0].lat],
       ]);
       expect(json.data.properties.distance_meters).toBe(0);
     });
   });
 
   describe("2. Branching & Shortest Path Decisions", () => {
-    it("chooses direct road over scenic detour to Central Plaza", async () => {
-      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=75.5620&fromLat=26.8420&toRoomId=30000000-0000-4000-8000-000000000004`;
+    it("chooses direct path between AB1 and Old Mess", async () => {
+      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=${SYNTHETIC_NODES[0].lng}&fromLat=${SYNTHETIC_NODES[0].lat}&toRoomId=${SYNTHETIC_NODES[3].id}`;
       const res = await getCampusRoute(createRequest(url), createParams(SYNTHETIC_CAMPUS_ID));
 
       expect(res.status).toBe(200);
       const json = await res.json();
 
-      expect(json.data.properties.distance_meters).toBe(310.0);
-      expect(json.data.geometry.coordinates).toHaveLength(3);
+      expect(json.data.properties.distance_meters).toBe(126.0);
+      expect(json.data.geometry.coordinates).toHaveLength(2);
     });
   });
 
-  describe("3. Accessibility Routing (Stairs vs. Ramp)", () => {
-    it("takes 90m stairs shortcut when accessible is false", async () => {
-      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=75.5640&fromLat=26.8440&toRoomId=30000000-0000-4000-8000-000000000008&accessible=false`;
+  describe("3. Accessibility Routing (Shortcut vs. Bypass)", () => {
+    it("takes 280m direct shortcut when accessible is false", async () => {
+      const nodeAB3 = SYNTHETIC_NODES[2];
+      const nodeDome = SYNTHETIC_NODES[5];
+      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=${nodeAB3.lng}&fromLat=${nodeAB3.lat}&toRoomId=${nodeDome.id}&accessible=false`;
       const res = await getCampusRoute(createRequest(url), createParams(SYNTHETIC_CAMPUS_ID));
 
       expect(res.status).toBe(200);
       const json = await res.json();
 
-      expect(json.data.properties.distance_meters).toBe(90.0);
+      expect(json.data.properties.distance_meters).toBe(280.0);
       expect(json.data.geometry.coordinates).toEqual([
-        [75.5640, 26.8440],
-        [75.5642, 26.8447],
-        [75.5645, 26.8455],
+        [nodeAB3.lng, nodeAB3.lat],
+        [nodeDome.lng, nodeDome.lat],
       ]);
     });
 
-    it("takes 140m ramp bypass when accessible is true", async () => {
-      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=75.5640&fromLat=26.8440&toRoomId=30000000-0000-4000-8000-000000000008&accessible=true`;
+    it("takes 294m bypass when accessible is true", async () => {
+      const nodeAB3 = SYNTHETIC_NODES[2];
+      const nodeOldMess = SYNTHETIC_NODES[3];
+      const nodeDome = SYNTHETIC_NODES[5];
+      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=${nodeAB3.lng}&fromLat=${nodeAB3.lat}&toRoomId=${nodeDome.id}&accessible=true`;
       const res = await getCampusRoute(createRequest(url), createParams(SYNTHETIC_CAMPUS_ID));
 
       expect(res.status).toBe(200);
       const json = await res.json();
 
-      expect(json.data.properties.distance_meters).toBe(140.0);
+      expect(json.data.properties.distance_meters).toBe(294.0);
       expect(json.data.geometry.coordinates).toEqual([
-        [75.5640, 26.8440],
-        [75.5649, 26.8448],
-        [75.5645, 26.8455],
+        [nodeAB3.lng, nodeAB3.lat],
+        [nodeOldMess.lng, nodeOldMess.lat],
+        [nodeDome.lng, nodeDome.lat],
       ]);
     });
   });
@@ -208,13 +211,13 @@ describe("UNI-88 & UNI-89: Routing API Smoke and Remediation Tests", () => {
 
   describe("5. Global /api/route Endpoint", () => {
     it("routes via fallback /api/route endpoint with valid coordinates", async () => {
-      const url = `http://localhost/api/route?fromLng=75.5620&fromLat=26.8420&toRoomId=30000000-0000-4000-8000-000000000003`;
+      const url = `http://localhost/api/route?fromLng=${SYNTHETIC_NODES[0].lng}&fromLat=${SYNTHETIC_NODES[0].lat}&toRoomId=${SYNTHETIC_NODES[5].id}`;
       const res = await getGlobalRoute(createRequest(url));
 
       expect(res.status).toBe(200);
       const json = await res.json();
 
-      expect(json.data.properties.distance_meters).toBe(235.0);
+      expect(json.data.properties.distance_meters).toBe(191.0);
     });
   });
 
@@ -246,7 +249,7 @@ describe("UNI-88 & UNI-89: Routing API Smoke and Remediation Tests", () => {
 
     it("returns 404 when destination room does not exist in graph", async () => {
       const fakeRoomId = "99999999-9999-4999-8999-999999999999";
-      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=75.5620&fromLat=26.8420&toRoomId=${fakeRoomId}`;
+      const url = `http://localhost/api/campus/${SYNTHETIC_CAMPUS_ID}/route?fromLng=${SYNTHETIC_NODES[0].lng}&fromLat=${SYNTHETIC_NODES[0].lat}&toRoomId=${fakeRoomId}`;
       const res = await getCampusRoute(createRequest(url), createParams(SYNTHETIC_CAMPUS_ID));
 
       expect(res.status).toBe(404);

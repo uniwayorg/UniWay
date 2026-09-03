@@ -1,0 +1,21 @@
+name: uniway_mobile
+description: UniWay Phase 0 Campus Navigation Client for Manipal University Jaipur
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  maplibre_gl: ^0.27.0
+  http: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

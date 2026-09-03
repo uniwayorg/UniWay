@@ -12,6 +12,17 @@ tsconfig.tsbuildinfo
 .cz.toml
 /docs/
 
-# Sentry Config File
 .env.sentry-build-plugin
 GEMINI.md
+.DS_Store
+**/.DS_Store
+mobile/.dart_tool/
+mobile/build/
+mobile/android/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub/
+

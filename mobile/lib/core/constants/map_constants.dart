@@ -1,0 +1,22 @@
+class MapConstants {
+  static const String openFreeMapLibertyStyle =
+      'https://tiles.openfreemap.org/styles/liberty';
+
+  static const String openFreeMapBrightStyle =
+      'https://tiles.openfreemap.org/styles/bright';
+
+  static const double mujLatitude = 26.8435;
+  static const double mujLongitude = 75.5645;
+  static const double defaultZoom = 16.5;
+
+  static const String campusGeometrySourceId = 'uniway-campus-geometry-source';
+  static const String campusBuildingsLayerId = 'uniway-campus-buildings-layer';
+
+  static const String destinationsSourceId = 'uniway-destinations-source';
+  static const String destinationsLayerId = 'uniway-destinations-layer';
+  static const String destinationsLabelsLayerId = 'uniway-destinations-labels';
+
+  static const String routeSourceId = 'uniway-active-route-source';
+  static const String routeLineLayerId = 'uniway-active-route-line';
+  static const String routeCasingLayerId = 'uniway-active-route-casing';
+}
