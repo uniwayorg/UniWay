@@ -32,9 +32,9 @@ describe("UNI-87: Importer and DB Query Path Verification", () => {
       expect(SYNTHETIC_BUILDING_ID).toBeDefined();
     });
 
-    it("has recorded 7 nodes, 21 edges, and 7 destinations", () => {
-      expect(SYNTHETIC_NODES).toHaveLength(7);
-      expect(SYNTHETIC_EDGES).toHaveLength(21);
+    it("has recorded 14 nodes, 17 edges, and 7 destinations", () => {
+      expect(SYNTHETIC_NODES).toHaveLength(14);
+      expect(SYNTHETIC_EDGES).toHaveLength(17);
       expect(SYNTHETIC_DESTINATIONS).toHaveLength(7);
     });
 
@@ -60,7 +60,7 @@ describe("UNI-87: Importer and DB Query Path Verification", () => {
     });
 
     it("ensures coordinate map resolves all nodes in the graph", () => {
-      expect(coordMap.size).toBe(7);
+      expect(coordMap.size).toBe(14);
       for (const node of SYNTHETIC_NODES) {
         const coords = coordMap.get(node.id);
         expect(coords).toEqual([node.lng, node.lat]);
@@ -69,62 +69,69 @@ describe("UNI-87: Importer and DB Query Path Verification", () => {
   });
 
   describe("3. In-Memory Graph Construction", () => {
-    it("builds an undirected graph with 7 nodes and 21 edges when accessibility is not required", () => {
+    it("builds an undirected graph with 14 nodes and 17 edges when accessibility is not required", () => {
       const graph = buildGraph(routingEdges, false);
-      expect(graph.order).toBe(7);
-      expect(graph.size).toBe(21);
+      expect(graph.order).toBe(14);
+      expect(graph.size).toBe(17);
     });
 
-    it("drops inaccessible edges when accessibility is required", () => {
+    it("drops inaccessible edges (stairs) when accessibility is required", () => {
       const accessibleGraph = buildGraph(routingEdges, true);
-      expect(accessibleGraph.order).toBe(7);
-      expect(accessibleGraph.size).toBe(20);
+      expect(accessibleGraph.order).toBe(13);
+      expect(accessibleGraph.size).toBe(15);
     });
   });
 
   describe("4. Shortest Path Routing on Synthetic Dataset", () => {
-    const nodeAB3 = SYNTHETIC_NODES[2].id;
-    const nodeDome = SYNTHETIC_NODES[5].id;
-    const nodeOldMess = SYNTHETIC_NODES[3].id;
+    const nodeCentral = "30000000-0000-4000-8000-000000000004";
+    const nodeAB1 = "30000000-0000-4000-8000-000000000008";
 
-    it("takes the direct shortcut when accessibility is false", () => {
+    it("takes the shorter stairs shortcut when accessibility is false", () => {
       const graph = buildGraph(routingEdges, false);
-      const path = dijkstra.bidirectional(graph, nodeAB3, nodeDome, "distance_meters");
+      const path = dijkstra.bidirectional(graph, nodeCentral, nodeAB1, "distance_meters");
 
-      expect(path).toEqual([nodeAB3, nodeDome]);
+      expect(path).toEqual([
+        nodeCentral,
+        "30000000-0000-4000-8000-000000000013",
+        nodeAB1,
+      ]);
 
       let dist = 0;
       for (let i = 0; i < path!.length - 1; i++) {
         const edge = graph.edge(path![i], path![i + 1]);
         dist += graph.getEdgeAttribute(edge!, "distance_meters");
       }
-      expect(dist).toBe(280.0);
+      expect(dist).toBe(90.0);
     });
 
-    it("takes the accessible bypass when accessibility is required", () => {
+    it("takes the ramp bypass when accessibility is required", () => {
       const graph = buildGraph(routingEdges, true);
-      const path = dijkstra.bidirectional(graph, nodeAB3, nodeDome, "distance_meters");
+      const path = dijkstra.bidirectional(graph, nodeCentral, nodeAB1, "distance_meters");
 
-      expect(path).toEqual([nodeAB3, nodeOldMess, nodeDome]);
+      expect(path).toEqual([
+        nodeCentral,
+        "30000000-0000-4000-8000-000000000014",
+        nodeAB1,
+      ]);
 
       let dist = 0;
       for (let i = 0; i < path!.length - 1; i++) {
         const edge = graph.edge(path![i], path![i + 1]);
         dist += graph.getEdgeAttribute(edge!, "distance_meters");
       }
-      expect(dist).toBe(294.0);
+      expect(dist).toBe(140.0);
     });
 
     it("assembles a valid GeoJSON LineString feature from Dijkstra node sequence", () => {
       const graph = buildGraph(routingEdges, false);
-      const path = dijkstra.bidirectional(graph, nodeAB3, nodeDome, "distance_meters");
+      const path = dijkstra.bidirectional(graph, nodeCentral, nodeAB1, "distance_meters");
 
-      const feature = assembleRoute(path!, coordMap, 280.0);
+      const feature = assembleRoute(path!, coordMap, 90.0);
       expect(feature).not.toBeNull();
       expect(feature?.type).toBe("Feature");
       expect(feature?.geometry.type).toBe("LineString");
-      expect(feature?.geometry.coordinates).toHaveLength(2);
-      expect(feature?.properties.distance_meters).toBe(280.0);
+      expect(feature?.geometry.coordinates).toHaveLength(3);
+      expect(feature?.properties.distance_meters).toBe(90.0);
     });
 
     it("verifies routability between all 7 Phase-0 destinations", () => {
