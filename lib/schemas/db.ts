@@ -29,7 +29,55 @@ export const RoomSchema = z.object({
 });
 export type Room = z.infer<typeof RoomSchema>;
 
-// THE DATA CONTRACT FOR TRACK B
+// QGIS routing node identifiers are stored directly, without generated node UUIDs.
+export const RoutingNodeIdSchema = z
+  .string()
+  .regex(/^OUT_[A-Z0-9_]+_[^_]+_[0-9]{3,}$/);
+
+const RoutingPositionSchema = z.tuple([
+  z.number().finite().min(-180).max(180),
+  z.number().finite().min(-90).max(90),
+]);
+
+const RoutingPointSchema = z.object({
+  type: z.literal("Point"),
+  coordinates: RoutingPositionSchema,
+});
+
+const RoutingLineStringSchema = z.object({
+  type: z.literal("LineString"),
+  coordinates: z.array(RoutingPositionSchema).min(2),
+});
+
+export const RoutingNodePropertiesSchema = z.object({
+  node_id: RoutingNodeIdSchema,
+  nid: z.number().int().positive().max(2147483647),
+  loc: z.string().trim().min(1),
+  node_type: z.enum(["junction", "entrance", "turn"]),
+  floor_id: z.string().trim().min(1),
+  is_accessible: z.boolean(),
+});
+
+// Database queries must convert geom with ST_AsGeoJSON(geom)::json.
+export const RoutingNodeSchema = RoutingNodePropertiesSchema.extend({
+  campus_id: z.string().uuid(),
+  geom: RoutingPointSchema,
+});
+export type RoutingNode = z.infer<typeof RoutingNodeSchema>;
+
+export const RoutingNodeFeatureSchema = z.object({
+  type: z.literal("Feature"),
+  properties: RoutingNodePropertiesSchema,
+  geometry: RoutingPointSchema,
+});
+
+export const RoutingNodesFileSchema = z.object({
+  type: z.literal("FeatureCollection"),
+  features: z.array(RoutingNodeFeatureSchema).min(1),
+});
+export type RoutingNodesFile = z.infer<typeof RoutingNodesFileSchema>;
+
+// Live room-based routing contract. Keep until its consumers migrate together.
 export const RoutingEdgeSchema = z.object({
   id: z.string().uuid(),
   source_node_id: z.string().uuid(),
@@ -41,6 +89,17 @@ export const RoutingEdgeSchema = z.object({
   edge_type: z.enum(["corridor", "stairs", "elevator", "door"]).optional(),
 });
 export type RoutingEdge = z.infer<typeof RoutingEdgeSchema>;
+
+// QGIS import contract; not yet the storage contract for routing_edges.
+export const QgisRoutingEdgeSchema = RoutingEdgeSchema.extend({
+  campus_id: z.string().uuid(),
+  source_node_id: RoutingNodeIdSchema,
+  target_node_id: RoutingNodeIdSchema,
+  floor_id: z.string().trim().min(1),
+  geom: RoutingLineStringSchema.nullish(),
+  edge_type: z.enum(["corridor", "stairs", "elevator", "door"]),
+});
+export type QgisRoutingEdge = z.infer<typeof QgisRoutingEdgeSchema>;
 
 // POI Schema
 export const POISchema = z.object({
