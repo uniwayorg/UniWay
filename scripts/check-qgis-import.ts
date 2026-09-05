@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { sql } from "../lib/db";
 import { importQgisDataset } from "../lib/spatial/import-qgis";
+import { fetchRoutingDestinations, getNearestRoutingNode } from "../lib/spatial/nodes";
+import { findNodeRoute } from "../lib/routing/nodes";
 
 // Run only against a disposable database with all migrations applied.
 assert.equal(process.env.QGIS_IMPORT_TEST, "1", "Set QGIS_IMPORT_TEST=1 for a disposable database");
@@ -59,6 +61,17 @@ try {
   `, /foreign key constraint/);
   const [count] = await sql`SELECT count(*)::int AS n FROM routing_nodes WHERE campus_id = ${otherId}`;
   assert.equal(count.n, 119);
+  const listed = await fetchRoutingDestinations(campusId);
+  assert.equal(listed.length, 7);
+  const origin = data.nodes.features[0];
+  const [lng, lat] = origin.geometry.coordinates;
+  const snap = await getNearestRoutingNode(campusId, lng, lat, "0", true);
+  assert.equal(snap?.node_id, origin.properties.node_id);
+  assert.equal(await getNearestRoutingNode(campusId, lng, lat, "999", false), null);
+  assert.equal(await getNearestRoutingNode(campusId, 0, 0, "0", false), null);
+  assert.ok(await findNodeRoute(campusId, snap!.node_id, listed[0].routing_node_id, false));
+  assert.equal(await findNodeRoute(crypto.randomUUID(), snap!.node_id, listed[0].routing_node_id, false), null);
+  console.log("Node routing passed: PostGIS snap, destinations, real path and campus isolation.");
   console.log("QGIS import passed: exact round-trip of 118 nodes, 153 edges and 7 destinations; repeat import and campus isolation.");
 } finally {
   await sql`DELETE FROM campuses WHERE id IN (${campusId}, ${otherId})`;
