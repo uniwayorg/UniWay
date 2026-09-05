@@ -23,5 +23,22 @@ All 118 nodes, 153 edges and 7 destinations pass validation with warnings.
 Including every edge leaves components of 116 and 2 nodes. No records are
 excluded. Duplicate identities and missing references remain errors.
 
-The check does not write to the database. Storage and importing are a separate
-change; they must preserve Point geometry as well as LineString geometry.
+The check does not write to the database. After applying migrations, import with:
+
+```sh
+bun scripts/import-qgis.ts <existing-campus-uuid> data/muj
+```
+
+Set DATABASE_URL explicitly to the intended database. The importer uses one
+transaction and upserts by campus and readable ID. Re-running updates supplied
+records without deleting omitted records. It does not create a campus, buildings,
+rooms or demo data. Point geometry is stored unchanged. Existing room-based
+routing remains separate and is not switched over by this import.
+
+For a disposable database with migrations applied, run the exact round-trip check:
+
+```sh
+QGIS_IMPORT_TEST=1 bun scripts/check-qgis-import.ts
+```
+
+This creates two temporary test campuses and removes only those campuses afterward.
