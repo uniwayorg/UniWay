@@ -21,28 +21,52 @@ class Destination {
   }) : routingNodeId = routingNodeId ?? roomId ?? id;
 
   factory Destination.fromJson(Map<String, dynamic> json) {
-    final geom = json['geom'] as Map<String, dynamic>?;
-    final coords = (geom?['coordinates'] as List<dynamic>?);
+    final id = json['id'] as String?;
+    if (id == null || id.isEmpty) {
+      throw const FormatException('Destination missing required id');
+    }
 
-    final double lat = coords != null && coords.length >= 2
-        ? (coords[1] as num).toDouble()
-        : (json['lat'] ?? json['latitude'] as num?)?.toDouble() ?? 0.0;
+    final name = json['name'] as String?;
+    if (name == null || name.isEmpty) {
+      throw FormatException('Destination $id missing required name');
+    }
 
-    final double lng = coords != null && coords.length >= 2
-        ? (coords[0] as num).toDouble()
-        : (json['lng'] ?? json['longitude'] as num?)?.toDouble() ?? 0.0;
+    final rawNode = json['routing_node_id'] ??
+        json['routingNodeId'] ??
+        json['room_id'] ??
+        json['roomId'];
+    if (rawNode == null || rawNode is! String || rawNode.trim().isEmpty) {
+      throw FormatException('Destination $id missing valid routing_node_id');
+    }
+    final node = rawNode.trim();
 
-    final node = (json['routing_node_id'] ??
-            json['routingNodeId'] ??
-            json['room_id'] ??
-            json['roomId'] ??
-            json['id'] ??
-            '') as String;
+    double? lat;
+    double? lng;
+
+    if (json.containsKey('geom') && json['geom'] is Map<String, dynamic>) {
+      final geom = json['geom'] as Map<String, dynamic>;
+      final coords = geom['coordinates'];
+      if (coords is List && coords.length >= 2 && coords[0] is num && coords[1] is num) {
+        lng = (coords[0] as num).toDouble();
+        lat = (coords[1] as num).toDouble();
+      }
+    } else {
+      final rawLat = json['lat'] ?? json['latitude'];
+      final rawLng = json['lng'] ?? json['longitude'];
+      if (rawLat is num && rawLng is num) {
+        lat = rawLat.toDouble();
+        lng = rawLng.toDouble();
+      }
+    }
+
+    if (lat == null || lng == null) {
+      throw FormatException('Destination $id missing valid geographic coordinates');
+    }
 
     return Destination(
-      id: json['id'] as String,
+      id: id,
       routingNodeId: node,
-      name: json['name'] as String,
+      name: name,
       category: (json['type'] ?? json['category'] ?? 'destination') as String,
       latitude: lat,
       longitude: lng,

@@ -31,6 +31,35 @@ void main() {
       expect(dest.category, 'destination');
     });
 
+    test('Destination.fromJson rejects malformed payloads without inventing coordinates or node IDs', () {
+      final missingCoords = {
+        'id': 'DEST_BAD',
+        'name': 'Bad Node',
+        'routing_node_id': 'OUT_BAD',
+      };
+      expect(() => Destination.fromJson(missingCoords), throwsFormatException);
+
+      final missingNode = {
+        'id': 'DEST_BAD_2',
+        'name': 'Bad Node 2',
+        'geom': {
+          'type': 'Point',
+          'coordinates': [75.5, 26.8],
+        },
+      };
+      expect(() => Destination.fromJson(missingNode), throwsFormatException);
+
+      final missingId = {
+        'name': 'No ID',
+        'routing_node_id': 'OUT_1',
+        'geom': {
+          'type': 'Point',
+          'coordinates': [75.5, 26.8],
+        },
+      };
+      expect(() => Destination.fromJson(missingId), throwsFormatException);
+    });
+
     test('Destination.fromJson retains backwards compatibility with room format', () {
       final legacyJson = {
         'id': 'room-dome-001',
@@ -141,43 +170,63 @@ void main() {
       expect(capturedUri.queryParameters['accessible'], 'true');
     });
 
-    test('RoutingRepository calls destinations endpoint and parses items', () async {
+    test('RoutingRepository calls destinations endpoint and distinguishes success from error', () async {
       late Uri capturedUri;
+      int statusCodeToReturn = 200;
+      String responseBody = json.encode({
+        'data': [
+          {
+            'id': 'DEST_1',
+            'name': 'Library',
+            'type': 'destination',
+            'routing_node_id': 'NODE_LIB_001',
+            'geom': {
+              'type': 'Point',
+              'coordinates': [75.566, 26.845],
+            },
+          },
+        ],
+      });
 
       final mockClient = MockClient((request) async {
         capturedUri = request.url;
         return http.Response(
-          json.encode({
-            'data': [
-              {
-                'id': 'DEST_1',
-                'name': 'Library',
-                'type': 'destination',
-                'routing_node_id': 'NODE_LIB_001',
-                'geom': {
-                  'type': 'Point',
-                  'coordinates': [75.566, 26.845],
-                },
-              },
-            ],
-          }),
-          200,
+          responseBody,
+          statusCodeToReturn,
           headers: {'content-type': 'application/json'},
         );
       });
 
       final repo = RoutingRepository(client: mockClient);
-      final destinations = await repo.getDestinations(
+      final result = await repo.getDestinations(
         campusId: '11111111-1111-4111-8111-111111111111',
       );
 
       expect(capturedUri.path, '/api/campus/11111111-1111-4111-8111-111111111111/destinations');
-      expect(destinations.length, 1);
-      expect(destinations.first.id, 'DEST_1');
-      expect(destinations.first.name, 'Library');
-      expect(destinations.first.routingNodeId, 'NODE_LIB_001');
-      expect(destinations.first.longitude, 75.566);
-      expect(destinations.first.latitude, 26.845);
+      expect(result.isSuccess, isTrue);
+      expect(result.destinations.length, 1);
+      expect(result.destinations.first.id, 'DEST_1');
+      expect(result.destinations.first.name, 'Library');
+
+      // Test error response
+      statusCodeToReturn = 500;
+      responseBody = json.encode({'error': 'Database unavailable'});
+      final errorResult = await repo.getDestinations(
+        campusId: '11111111-1111-4111-8111-111111111111',
+      );
+      expect(errorResult.isSuccess, isFalse);
+      expect(errorResult.destinations, isEmpty);
+      expect(errorResult.errorMessage, 'Database unavailable');
+
+      // Test empty successful response
+      statusCodeToReturn = 200;
+      responseBody = json.encode({'data': []});
+      final emptyResult = await repo.getDestinations(
+        campusId: '11111111-1111-4111-8111-111111111111',
+      );
+      expect(emptyResult.isSuccess, isTrue);
+      expect(emptyResult.destinations, isEmpty);
+      expect(emptyResult.errorMessage, isNull);
     });
   });
 }

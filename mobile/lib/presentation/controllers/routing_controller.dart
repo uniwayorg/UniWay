@@ -2,63 +2,75 @@ import 'package:flutter/foundation.dart';
 import '../../core/constants/campus_constants.dart';
 import '../../data/models/campus_route.dart';
 import '../../data/models/destination.dart';
-import '../../data/models/phase0_destinations.dart';
 import '../../data/repositories/routing_repository.dart';
 
 class RoutingController extends ChangeNotifier {
   final RoutingRepository _repository;
   final String campusId;
 
-  List<Destination> _destinations = Phase0Destinations.all;
+  List<Destination> _destinations = const [];
   Destination? _origin;
   Destination? _destination;
   CampusRoute? _currentRoute;
   bool _isLoading = false;
+  bool _isLoadingDestinations = false;
   String? _errorMessage;
+  String? _destinationsError;
   int? _statusCode;
   int? _latencyMs;
   bool _accessibleOnly = false;
+  int _activeRouteRequestId = 0;
+  int _destinationsRevision = 0;
+  bool _disposed = false;
 
   RoutingController({
     RoutingRepository? repository,
     this.campusId = CampusConstants.syntheticCampusId,
   }) : _repository = repository ?? RoutingRepository() {
-    _initDefaultDestinations();
     loadDestinations();
   }
 
-  void _initDefaultDestinations() {
-    if (_destinations.length >= 2) {
-      _origin = _destinations.firstWhere(
-        (d) => d.name.contains('Dome'),
-        orElse: () => _destinations[0],
-      );
-      _destination = _destinations.firstWhere(
-        (d) => d.name.contains('AB1'),
-        orElse: () => _destinations[1],
-      );
-    }
-  }
-
   Future<void> loadDestinations() async {
-    final remote = await _repository.getDestinations(campusId: campusId);
-    if (remote.isNotEmpty) {
-      _destinations = remote;
-      if (_origin == null || !_destinations.contains(_origin)) {
+    _isLoadingDestinations = true;
+    _destinationsError = null;
+    notifyListeners();
+
+    final result = await _repository.getDestinations(campusId: campusId);
+    if (_disposed) return;
+
+    _isLoadingDestinations = false;
+
+    if (result.isSuccess) {
+      _destinations = result.destinations;
+      _destinationsRevision++;
+      _destinationsError = null;
+
+      if (_destinations.length >= 2) {
         _origin = _destinations.firstWhere(
           (d) => d.name.toLowerCase().contains('dome') || d.name.toLowerCase().contains('ab1'),
           orElse: () => _destinations[0],
         );
-      }
-      if (_destination == null || !_destinations.contains(_destination)) {
         _destination = _destinations.firstWhere(
           (d) => d != _origin,
-          orElse: () => _destinations.length > 1 ? _destinations[1] : _destinations[0],
+          orElse: () => _destinations[1],
         );
+      } else if (_destinations.isNotEmpty) {
+        _origin = _destinations[0];
+        _destination = null;
+      } else {
+        _origin = null;
+        _destination = null;
       }
       _clearActiveRoute();
-      notifyListeners();
+    } else {
+      _destinations = const [];
+      _destinationsError = result.errorMessage ?? 'Failed to load campus destinations';
+      _origin = null;
+      _destination = null;
+      _clearActiveRoute();
     }
+
+    notifyListeners();
   }
 
   List<Destination> get destinations => _destinations;
@@ -66,14 +78,26 @@ class RoutingController extends ChangeNotifier {
   Destination? get destination => _destination;
   CampusRoute? get currentRoute => _currentRoute;
   bool get isLoading => _isLoading;
+  bool get isLoadingDestinations => _isLoadingDestinations;
   String? get errorMessage => _errorMessage;
+  String? get destinationsError => _destinationsError;
   int? get statusCode => _statusCode;
   int? get latencyMs => _latencyMs;
   bool get accessibleOnly => _accessibleOnly;
-  bool get canGo => _origin != null && _destination != null && _origin != _destination;
+  int get destinationsRevision => _destinationsRevision;
+  bool get isDisposed => _disposed;
+
+  bool get canGo =>
+      !_isLoadingDestinations &&
+      _destinationsError == null &&
+      _origin != null &&
+      _destination != null &&
+      _origin != _destination &&
+      !_isLoading;
 
   void setOrigin(Destination? newOrigin) {
     if (_origin == newOrigin) return;
+    _activeRouteRequestId++;
     _origin = newOrigin;
     final hadRoute = _currentRoute != null;
     _clearActiveRoute();
@@ -85,6 +109,7 @@ class RoutingController extends ChangeNotifier {
 
   void setDestination(Destination? newDestination) {
     if (_destination == newDestination) return;
+    _activeRouteRequestId++;
     _destination = newDestination;
     final hadRoute = _currentRoute != null;
     _clearActiveRoute();
@@ -96,6 +121,7 @@ class RoutingController extends ChangeNotifier {
 
   void setAccessibleOnly(bool value) {
     if (_accessibleOnly == value) return;
+    _activeRouteRequestId++;
     _accessibleOnly = value;
     notifyListeners();
     if (_currentRoute != null) {
@@ -105,6 +131,7 @@ class RoutingController extends ChangeNotifier {
 
   void swap() {
     if (_origin == null || _destination == null) return;
+    _activeRouteRequestId++;
     final temp = _origin;
     _origin = _destination;
     _destination = temp;
@@ -114,8 +141,9 @@ class RoutingController extends ChangeNotifier {
   }
 
   Future<void> fetchRoute() async {
-    if (_origin == null || _destination == null) return;
+    if (_origin == null || _destination == null || _disposed) return;
 
+    final requestId = ++_activeRouteRequestId;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -126,6 +154,10 @@ class RoutingController extends ChangeNotifier {
       destination: _destination!,
       accessible: _accessibleOnly,
     );
+
+    if (_disposed || requestId != _activeRouteRequestId) {
+      return;
+    }
 
     _isLoading = false;
     _statusCode = result.statusCode;
@@ -143,6 +175,7 @@ class RoutingController extends ChangeNotifier {
   }
 
   void clearRoute() {
+    _activeRouteRequestId++;
     _clearActiveRoute();
     notifyListeners();
   }
@@ -156,6 +189,8 @@ class RoutingController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    _activeRouteRequestId++;
     _repository.dispose();
     super.dispose();
   }

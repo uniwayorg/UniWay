@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../core/constants/map_constants.dart';
 import '../../data/models/campus_route.dart';
+import '../../data/models/destination.dart';
 import '../controllers/routing_controller.dart';
 import '../widgets/debug_panel.dart';
 import '../widgets/route_picker_card.dart';
@@ -22,6 +23,9 @@ class _MapScreenState extends State<MapScreen> {
   final List<Circle> _destinationCircles = [];
   final List<Symbol> _destinationSymbols = [];
   bool _styleLoaded = false;
+  String _renderedDestinationsHash = '';
+  bool _isRedrawing = false;
+  bool _redrawPending = false;
 
   @override
   void initState() {
@@ -43,13 +47,53 @@ class _MapScreenState extends State<MapScreen> {
 
   void _onStyleLoaded() async {
     _styleLoaded = true;
-    await _renderDestinationMarkers();
+    await _syncMapWithState();
   }
 
-  Future<void> _renderDestinationMarkers() async {
-    final map = _mapController;
-    if (map == null) return;
+  void _onRoutingStateChanged() {
+    _syncMapWithState();
+  }
 
+  Future<void> _syncMapWithState() async {
+    final map = _mapController;
+    if (!_styleLoaded || map == null) return;
+
+    if (_isRedrawing) {
+      _redrawPending = true;
+      return;
+    }
+
+    _isRedrawing = true;
+    try {
+      do {
+        _redrawPending = false;
+
+        final currentDestinations = _controller.destinations;
+        final currentHash = currentDestinations
+            .map((d) => '${d.id}:${d.routingNodeId}:${d.latitude}:${d.longitude}')
+            .join('|');
+
+        if (_renderedDestinationsHash != currentHash) {
+          await _renderDestinationMarkers(map, currentDestinations);
+          _renderedDestinationsHash = currentHash;
+        }
+
+        final route = _controller.currentRoute;
+        if (route != null) {
+          await _drawRoute(map, route);
+        } else {
+          await _clearRoute(map);
+        }
+      } while (_redrawPending);
+    } finally {
+      _isRedrawing = false;
+    }
+  }
+
+  Future<void> _renderDestinationMarkers(
+    MapLibreMapController map,
+    List<Destination> destinations,
+  ) async {
     for (final circle in _destinationCircles) {
       await map.removeCircle(circle);
     }
@@ -60,7 +104,7 @@ class _MapScreenState extends State<MapScreen> {
     }
     _destinationSymbols.clear();
 
-    for (final d in _controller.destinations) {
+    for (final d in destinations) {
       final latLng = LatLng(d.latitude, d.longitude);
 
       final circle = await map.addCircle(
@@ -91,24 +135,7 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _onRoutingStateChanged() {
-    if (!_styleLoaded || _mapController == null) return;
-
-    if (_destinationCircles.length != _controller.destinations.length) {
-      _renderDestinationMarkers();
-    }
-
-    if (_controller.currentRoute != null) {
-      _drawRoute(_controller.currentRoute!);
-    } else {
-      _clearRoute();
-    }
-  }
-
-  Future<void> _clearRoute() async {
-    final map = _mapController;
-    if (map == null) return;
-
+  Future<void> _clearRoute(MapLibreMapController map) async {
     if (_activeRouteCasing != null) {
       await map.removeLine(_activeRouteCasing!);
       _activeRouteCasing = null;
@@ -119,11 +146,10 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  Future<void> _drawRoute(CampusRoute route) async {
-    final map = _mapController;
-    if (map == null || route.points.isEmpty) return;
+  Future<void> _drawRoute(MapLibreMapController map, CampusRoute route) async {
+    if (route.points.isEmpty) return;
 
-    await _clearRoute();
+    await _clearRoute(map);
 
     _activeRouteCasing = await map.addLine(
       LineOptions(
@@ -145,12 +171,11 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
 
-    _fitRouteBounds(route.points);
+    _fitRouteBounds(map, route.points);
   }
 
-  void _fitRouteBounds(List<LatLng> points) {
-    final map = _mapController;
-    if (map == null || points.length < 2) return;
+  void _fitRouteBounds(MapLibreMapController map, List<LatLng> points) {
+    if (points.length < 2) return;
 
     double minLat = points.first.latitude;
     double maxLat = points.first.latitude;
