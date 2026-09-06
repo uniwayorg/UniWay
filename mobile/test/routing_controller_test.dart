@@ -8,6 +8,12 @@ import 'package:uniway_mobile/presentation/controllers/routing_controller.dart';
 
 class MockRoutingRepository implements RoutingRepository {
   bool shouldSucceed = true;
+  List<Destination> mockDestinations = [];
+
+  @override
+  Future<List<Destination>> getDestinations({required String campusId}) async {
+    return mockDestinations;
+  }
 
   @override
   Future<RoutingResult> getRoute({
@@ -104,6 +110,34 @@ void main() {
       expect(controller.destination, equals(newDest));
       await Future<void>.delayed(Duration.zero);
       expect(controller.currentRoute, isNotNull);
+    });
+
+    test('loadDestinations updates destinations from repository', () async {
+      mockRepo.mockDestinations = [
+        const Destination(
+          id: 'DEST_TEST_1',
+          routingNodeId: 'NODE_TEST_1',
+          name: 'Dome Entrance',
+          category: 'destination',
+          latitude: 26.843,
+          longitude: 75.565,
+        ),
+        const Destination(
+          id: 'DEST_TEST_2',
+          routingNodeId: 'NODE_TEST_2',
+          name: 'Academic Block 1',
+          category: 'destination',
+          latitude: 26.844,
+          longitude: 75.566,
+        ),
+      ];
+
+      await controller.loadDestinations();
+
+      expect(controller.destinations.length, 2);
+      expect(controller.destinations[0].id, 'DEST_TEST_1');
+      expect(controller.destinations[0].routingNodeId, 'NODE_TEST_1');
+      expect(controller.destinations[1].id, 'DEST_TEST_2');
     });
   });
 }

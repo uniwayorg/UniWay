@@ -94,6 +94,10 @@ class _MapScreenState extends State<MapScreen> {
   void _onRoutingStateChanged() {
     if (!_styleLoaded || _mapController == null) return;
 
+    if (_destinationCircles.length != _controller.destinations.length) {
+      _renderDestinationMarkers();
+    }
+
     if (_controller.currentRoute != null) {
       _drawRoute(_controller.currentRoute!);
     } else {

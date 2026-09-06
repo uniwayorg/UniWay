@@ -9,7 +9,7 @@ class RoutingController extends ChangeNotifier {
   final RoutingRepository _repository;
   final String campusId;
 
-  final List<Destination> _destinations = Phase0Destinations.all;
+  List<Destination> _destinations = Phase0Destinations.all;
   Destination? _origin;
   Destination? _destination;
   CampusRoute? _currentRoute;
@@ -23,6 +23,11 @@ class RoutingController extends ChangeNotifier {
     RoutingRepository? repository,
     this.campusId = CampusConstants.syntheticCampusId,
   }) : _repository = repository ?? RoutingRepository() {
+    _initDefaultDestinations();
+    loadDestinations();
+  }
+
+  void _initDefaultDestinations() {
     if (_destinations.length >= 2) {
       _origin = _destinations.firstWhere(
         (d) => d.name.contains('Dome'),
@@ -32,6 +37,27 @@ class RoutingController extends ChangeNotifier {
         (d) => d.name.contains('AB1'),
         orElse: () => _destinations[1],
       );
+    }
+  }
+
+  Future<void> loadDestinations() async {
+    final remote = await _repository.getDestinations(campusId: campusId);
+    if (remote.isNotEmpty) {
+      _destinations = remote;
+      if (_origin == null || !_destinations.contains(_origin)) {
+        _origin = _destinations.firstWhere(
+          (d) => d.name.toLowerCase().contains('dome') || d.name.toLowerCase().contains('ab1'),
+          orElse: () => _destinations[0],
+        );
+      }
+      if (_destination == null || !_destinations.contains(_destination)) {
+        _destination = _destinations.firstWhere(
+          (d) => d != _origin,
+          orElse: () => _destinations.length > 1 ? _destinations[1] : _destinations[0],
+        );
+      }
+      _clearActiveRoute();
+      notifyListeners();
     }
   }
 

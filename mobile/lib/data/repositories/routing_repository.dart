@@ -25,6 +25,33 @@ class RoutingRepository {
 
   RoutingRepository({http.Client? client}) : _client = client ?? http.Client();
 
+  Future<List<Destination>> getDestinations({required String campusId}) async {
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}${ApiConstants.destinationsEndpoint(campusId)}',
+    );
+
+    try {
+      final response = await _client.get(
+        uri,
+        headers: {
+          'Accept': 'application/json',
+          'x-request-id': 'flutter-${DateTime.now().millisecondsSinceEpoch}',
+        },
+      ).timeout(ApiConstants.requestTimeout);
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body) as Map<String, dynamic>;
+        final data = decoded['data'] as List<dynamic>? ?? [];
+        return data
+            .map((item) => Destination.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<RoutingResult> getRoute({
     required String campusId,
     required Destination origin,
@@ -34,12 +61,13 @@ class RoutingRepository {
     final queryParams = {
       'fromLng': origin.longitude.toString(),
       'fromLat': origin.latitude.toString(),
-      'toRoomId': destination.roomId,
+      'toNodeId': destination.routingNodeId,
+      'floor': '0',
       if (accessible) 'accessible': 'true',
     };
 
     final uri = Uri.parse(
-      '${ApiConstants.baseUrl}${ApiConstants.routeEndpoint(campusId)}',
+      '${ApiConstants.baseUrl}${ApiConstants.nodeRouteEndpoint(campusId)}',
     ).replace(queryParameters: queryParams);
 
     final stopwatch = Stopwatch()..start();
