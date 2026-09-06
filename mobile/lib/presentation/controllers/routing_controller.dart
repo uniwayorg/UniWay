@@ -20,6 +20,7 @@ class RoutingController extends ChangeNotifier {
   int? _latencyMs;
   bool _accessibleOnly = false;
   int _activeRouteRequestId = 0;
+  int _activeDestinationsRequestId = 0;
   int _destinationsRevision = 0;
   bool _disposed = false;
 
@@ -31,12 +32,15 @@ class RoutingController extends ChangeNotifier {
   }
 
   Future<void> loadDestinations() async {
+    final requestId = ++_activeDestinationsRequestId;
+    _activeRouteRequestId++;
+    _clearActiveRoute();
     _isLoadingDestinations = true;
     _destinationsError = null;
     notifyListeners();
 
     final result = await _repository.getDestinations(campusId: campusId);
-    if (_disposed) return;
+    if (_disposed || requestId != _activeDestinationsRequestId) return;
 
     _isLoadingDestinations = false;
 
@@ -123,8 +127,10 @@ class RoutingController extends ChangeNotifier {
     if (_accessibleOnly == value) return;
     _activeRouteRequestId++;
     _accessibleOnly = value;
+    final hadRoute = _currentRoute != null;
+    _clearActiveRoute();
     notifyListeners();
-    if (_currentRoute != null) {
+    if (hadRoute && _origin != null && _destination != null) {
       fetchRoute();
     }
   }
@@ -181,6 +187,7 @@ class RoutingController extends ChangeNotifier {
   }
 
   void _clearActiveRoute() {
+    _isLoading = false;
     _currentRoute = null;
     _errorMessage = null;
     _statusCode = null;
@@ -191,6 +198,8 @@ class RoutingController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _activeRouteRequestId++;
+    _activeDestinationsRequestId++;
+    _clearActiveRoute();
     _repository.dispose();
     super.dispose();
   }
