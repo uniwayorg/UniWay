@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { RoutingLineStringSchema, RoutingNodeIdSchema, RoutingNodesFileSchema, RoutingPointSchema } from "@/lib/schemas/db";
 
-const EdgeFeatureSchema = z.object({
+export const EdgeFeatureSchema = z.object({
   type: z.literal("Feature"),
   properties: z.object({
     edge_id: z.string().min(1),
@@ -16,7 +16,7 @@ const EdgeFeatureSchema = z.object({
   geometry: z.union([RoutingLineStringSchema, RoutingPointSchema]),
 });
 
-const DestinationFeatureSchema = z.object({
+export const DestinationFeatureSchema = z.object({
   type: z.literal("Feature"),
   properties: z.object({
     id: z.string().min(1),
