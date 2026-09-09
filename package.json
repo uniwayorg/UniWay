@@ -14,6 +14,7 @@
     "migrate": "dotenv -e .env.local -- ley up",
     "migrate:down": "dotenv -e .env.local -- ley down",
     "db:seed": "dotenv -e .env.local -- bun scripts/seed.ts",
+    "db:seed:phase0": "dotenv -e .env.local -- bun scripts/seed-synthetic-phase0.ts",
     "import:campus": "dotenv -e .env.local -- bun scripts/import-campus.ts",
     "validate:spatial": "dotenv -e .env.local -- bun scripts/validate-spatial.ts"
   },
