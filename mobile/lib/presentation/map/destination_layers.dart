@@ -1,11 +1,14 @@
+import 'map_palette.dart';
 import 'package:flutter/foundation.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../core/constants/map_constants.dart';
+import '../../core/constants/poi_icons.dart';
 import '../../data/models/destination.dart';
+import 'poi_icon_registry.dart';
 
-// Destinations are rendered as one GeoJSON source with a circle layer and a
-// label layer, so a destination list change costs a single platform channel
-// call instead of one circle plus one symbol per destination.
+// Destinations are rendered as one GeoJSON source with a symbol layer (or circle
+// fallback) and a label layer, so a destination list change costs a single
+// platform channel call instead of one circle plus one symbol per destination.
 
 // Labels are hidden below this zoom once the collection becomes dense.
 const double labelDenseZoom = 15.0;
@@ -16,7 +19,7 @@ const int denseDestinationThreshold = 50;
 // Sentinel id used by the highlight filters, no destination can match it.
 const String noHighlightId = '__uniway_no_highlight__';
 
-// Circle radius grows with the zoom level, the old fixed radius was 7.
+// Circle radius grows with the zoom level, used when icon registration fails.
 const List<Object> destinationCircleRadius = [
   'interpolate',
   ['linear'],
@@ -27,56 +30,78 @@ const List<Object> destinationCircleRadius = [
   8,
 ];
 
-// Highlight rings sit outside the marker circle.
+// Highlight rings sit just outside the marker icon (about 13px to 18px radius).
 const List<Object> destinationHighlightRadius = [
   'interpolate',
   ['linear'],
   ['zoom'],
   14,
-  8,
+  16,
   19,
-  11,
+  21,
 ];
 
-const CircleLayerProperties destinationCirclePaint = CircleLayerProperties(
-  circleRadius: destinationCircleRadius,
-  circleColor: '#2563EB',
-  circleStrokeWidth: 2.5,
-  circleStrokeColor: '#FFFFFF',
-  circleOpacity: 0.95,
-);
+// Marker icons are drawn at 26 dp (zoom 14) growing to 34 dp (zoom 19), the size
+// Google and Apple Maps use for place markers, independent of screen density.
+List<Object> destinationIconSize(double pixelRatio) => poiIconSizeExpression(
+      pixelRatio: pixelRatio,
+      minZoom: 14,
+      minDp: 26,
+      maxZoom: 19,
+      maxDp: 34,
+    );
 
-const CircleLayerProperties destinationOriginPaint = CircleLayerProperties(
-  circleRadius: destinationHighlightRadius,
-  circleColor: '#16A34A',
-  circleOpacity: 0.0,
-  circleStrokeWidth: 3.0,
-  circleStrokeColor: '#16A34A',
-);
 
-const CircleLayerProperties destinationDestinationPaint = CircleLayerProperties(
-  circleRadius: destinationHighlightRadius,
-  circleColor: '#DC2626',
-  circleOpacity: 0.0,
-  circleStrokeWidth: 3.0,
-  circleStrokeColor: '#DC2626',
-);
+CircleLayerProperties destinationCirclePaintFor(MapPalette palette) =>
+    CircleLayerProperties(
+      circleRadius: destinationCircleRadius,
+      circleColor: palette.destinationCircleFill,
+      circleStrokeWidth: 2.5,
+      circleStrokeColor: palette.destinationCircleStroke,
+      circleOpacity: 0.95,
+    );
 
-const SymbolLayerProperties destinationLabelPaint = SymbolLayerProperties(
-  textField: ['get', 'name'],
-  textFont: ['Noto Sans Regular'],
-  textSize: 11.0,
-  textColor: '#1E293B',
-  textHaloColor: '#FFFFFF',
-  textHaloWidth: 2.0,
-  textOffset: [0, 1.2],
-  textAnchor: 'top',
-  // Crowded collections drop labels instead of stacking them on top of each
-  // other, a constant sort key keeps the placement order stable.
-  symbolSortKey: 0,
-  textAllowOverlap: false,
-  textOptional: true,
-);
+CircleLayerProperties destinationOriginPaintFor(MapPalette palette) =>
+    CircleLayerProperties(
+      circleRadius: destinationHighlightRadius,
+      circleColor: palette.destinationOriginRing,
+      circleOpacity: 0.0,
+      circleStrokeWidth: 3.0,
+      circleStrokeColor: palette.destinationOriginRing,
+    );
+
+CircleLayerProperties destinationDestinationPaintFor(MapPalette palette) =>
+    CircleLayerProperties(
+      circleRadius: destinationHighlightRadius,
+      circleColor: palette.destinationDestinationRing,
+      circleOpacity: 0.0,
+      circleStrokeWidth: 3.0,
+      circleStrokeColor: palette.destinationDestinationRing,
+    );
+
+SymbolLayerProperties destinationLabelPaintFor(MapPalette palette) =>
+    SymbolLayerProperties(
+      textField: const ['get', 'name'],
+      textFont: const ['Noto Sans Regular'],
+      textSize: 11.0,
+      textColor: palette.destinationLabelText,
+      textHaloColor: palette.destinationLabelHalo,
+      textHaloWidth: 2.0,
+      textOffset: const [0, 2.1],
+      textAnchor: 'top',
+      symbolSortKey: 0,
+      textAllowOverlap: false,
+      textOptional: true,
+    );
+
+SymbolLayerProperties destinationMarkerPaint(double pixelRatio) =>
+    SymbolLayerProperties(
+      iconImage: ['get', 'icon'],
+      iconSize: destinationIconSize(pixelRatio),
+      iconAllowOverlap: true,
+      iconIgnorePlacement: true,
+      iconAnchor: 'center',
+    );
 
 // Tracks whether each map's label layer is currently rendered in dense mode.
 // Keying on the controller keeps independent maps from sharing density state,
@@ -87,10 +112,17 @@ final Expando<bool> _labelDenseByController =
 bool _isDenseDestinationCollection(int destinationCount) =>
     destinationCount > denseDestinationThreshold;
 
+Map<String, String>? _iconProperty(String key, Set<String> registered) {
+  final icon = effectiveIconImageId(key, registered);
+  return icon == null ? null : {'icon': icon};
+}
+
 /// Builds a GeoJSON feature collection holding every destination.
 Map<String, dynamic> destinationsToFeatureCollection(
-  List<Destination> destinations,
-) {
+  List<Destination> destinations, {
+  Set<String>? registeredIcons,
+}) {
+  final registered = registeredIcons ?? kPoiIconKeys.toSet();
   return {
     'type': 'FeatureCollection',
     'features': [
@@ -106,6 +138,7 @@ Map<String, dynamic> destinationsToFeatureCollection(
             'id': destination.id,
             'name': destination.name,
             'category': destination.category,
+            ...?_iconProperty(destination.resolvedIconKey, registered),
           },
         },
     ],
@@ -138,26 +171,46 @@ Future<void> removeDestinationLayers(MapLibreMapController controller) async {
 Future<void> addDestinationLayers(
   MapLibreMapController controller, {
   int destinationCount = 0,
+  Set<String>? registeredIcons,
+  double pixelRatio = kDefaultPixelRatio,
+  MapPalette palette = MapPalette.light,
 }) async {
   try {
     await removeDestinationLayers(controller);
 
+    final registered = registeredIcons ?? kPoiIconKeys.toSet();
+    final hasFallback = registered.contains(kPoiIconFallback);
+
     await controller.addSource(
       MapConstants.destinationsSourceId,
-      GeojsonSourceProperties(data: destinationsToFeatureCollection(const [])),
+      GeojsonSourceProperties(
+        data: destinationsToFeatureCollection(
+          const [],
+          registeredIcons: registered,
+        ),
+      ),
     );
 
-    await controller.addCircleLayer(
-      MapConstants.destinationsSourceId,
-      MapConstants.destinationsLayerId,
-      destinationCirclePaint,
-      enableInteraction: false,
-    );
+    if (hasFallback) {
+      await controller.addSymbolLayer(
+        MapConstants.destinationsSourceId,
+        MapConstants.destinationsLayerId,
+        destinationMarkerPaint(pixelRatio),
+        enableInteraction: false,
+      );
+    } else {
+      await controller.addCircleLayer(
+        MapConstants.destinationsSourceId,
+        MapConstants.destinationsLayerId,
+        destinationCirclePaintFor(palette),
+        enableInteraction: false,
+      );
+    }
 
     await controller.addCircleLayer(
       MapConstants.destinationsSourceId,
       MapConstants.destinationsOriginLayerId,
-      destinationOriginPaint,
+      destinationOriginPaintFor(palette),
       filter: destinationIdFilter(null),
       enableInteraction: false,
     );
@@ -165,13 +218,13 @@ Future<void> addDestinationLayers(
     await controller.addCircleLayer(
       MapConstants.destinationsSourceId,
       MapConstants.destinationsDestinationLayerId,
-      destinationDestinationPaint,
+      destinationDestinationPaintFor(palette),
       filter: destinationIdFilter(null),
       enableInteraction: false,
     );
 
     final dense = _isDenseDestinationCollection(destinationCount);
-    await _addDestinationLabelLayer(controller, dense: dense);
+    await _addDestinationLabelLayer(controller, dense: dense, palette: palette);
     _labelDenseByController[controller] = dense;
   } catch (e) {
     debugPrint('addDestinationLayers failed: $e');
@@ -181,12 +234,17 @@ Future<void> addDestinationLayers(
 /// Replaces the destination data with a single source update.
 Future<void> updateDestinationSource(
   MapLibreMapController controller,
-  List<Destination> destinations,
-) async {
+  List<Destination> destinations, {
+  Set<String>? registeredIcons,
+  MapPalette palette = MapPalette.light,
+}) async {
   try {
     await controller.setGeoJsonSource(
       MapConstants.destinationsSourceId,
-      destinationsToFeatureCollection(destinations),
+      destinationsToFeatureCollection(
+        destinations,
+        registeredIcons: registeredIcons,
+      ),
     );
   } catch (e) {
     debugPrint('updateDestinationSource failed: $e');
@@ -199,7 +257,7 @@ Future<void> updateDestinationSource(
   if (dense != _labelDenseByController[controller]) {
     try {
       await controller.removeLayer(MapConstants.destinationsLabelsLayerId);
-      await _addDestinationLabelLayer(controller, dense: dense);
+      await _addDestinationLabelLayer(controller, dense: dense, palette: palette);
       _labelDenseByController[controller] = dense;
     } catch (_) {}
   }
@@ -229,11 +287,12 @@ Future<void> setHighlightedDestinations(
 Future<void> _addDestinationLabelLayer(
   MapLibreMapController controller, {
   required bool dense,
+  MapPalette palette = MapPalette.light,
 }) async {
   await controller.addSymbolLayer(
     MapConstants.destinationsSourceId,
     MapConstants.destinationsLabelsLayerId,
-    destinationLabelPaint,
+    destinationLabelPaintFor(palette),
     minzoom: dense ? labelDenseZoom : null,
     enableInteraction: false,
   );
